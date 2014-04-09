@@ -20,27 +20,28 @@ func close(c *client) {
 */
 
 func (self *client) CheckConnection() error {
-	if !self.connected {
-		//fmt.Printf("Connecting to server ...\n");
+	//if !self.connected {
 		c, err := rpc.Dial("tcp", self.addr);
 		self.handler = c;
 		return err;
-	}
-	self.connected = true;
-	//fmt.Printf("Already connected!\n");
-	return nil;
+	//}
+	//self.connected = true;
+	//return nil;
 }
 
 /*
  * Implementing KeyString
  */
 func (self *client) Get(key string, value *string) error {
-	//fmt.Printf("Getting value for key = " + key + "\n");
 	err := self.CheckConnection();
 	if err == nil {
-		//fmt.Printf("Making RPC call ...\n");
 		err = self.handler.Call("Storage.Get", key, value);
-		//fmt.Printf("Server returned " + *value + "\n");
+		/*
+		if err == ErrShutdown {
+			self.connected = false;
+			err = Get(key, value);
+		}
+		*/
 	}
 	return err;
 }
