@@ -65,9 +65,9 @@ func TestRPC(t *testing.T) {
 
 	// kv-client localhost:12086 list-get hello -> nil
 	var lst2 List;
-	e = c.ListGet("hello", &lst2);
+	e = c.ListGet("hello2", &lst2);
 	if e != nil || cap(lst2.L) > 0 {
-		t.Fatal("list(hello) is expected to return nil!");
+		t.Fatal("list(hello2) is expected to return empty list!");
 	}
 
 	// kv-client localhost:12086 list-get h8liu -> nil
