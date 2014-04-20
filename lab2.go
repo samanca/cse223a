@@ -1,18 +1,20 @@
 package triblab
 
 import (
-	"trib"
+	. "trib"
 )
 
-func NewBinClient(backs []string) trib.BinStorage {
+func NewBinClient(backs []string) BinStorage {
 	panic("todo")
 }
 
-func ServeKeeper(kc *trib.KeeperConfig) error {
-	panic("todo")
+func ServeKeeper(kc *KeeperConfig) error {
+	k := keeper{ config: kc }
+	if kc.Ready != nil { kc.Ready <- true }
+	return k.run()
 }
 
-func NewFront(s trib.BinStorage) trib.Server {
+func NewFront(s BinStorage) Server {
 	panic("todo")
 }
 
