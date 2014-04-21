@@ -3,12 +3,12 @@ package triblab_test
 import (
 	"testing"
 
+	"trib"
 	"trib/entries"
 	"trib/randaddr"
 	"trib/store"
 	"trib/tribtest"
 	"triblab"
-	"trib"
 )
 
 func startKeeper(t *testing.T, addr string) {
@@ -17,7 +17,7 @@ func startKeeper(t *testing.T, addr string) {
 	for addrk == addr {
 		addrk = randaddr.Local()
 	}
-	
+
 	go func() {
 		e := triblab.ServeKeeper(&trib.KeeperConfig{
 			Backs: []string{addr},
@@ -46,7 +46,7 @@ func TestServer(t *testing.T) {
 		}
 	}()
 	<-ready
-	
+
 	startKeeper(t, addr)
 
 	server := entries.MakeFrontSingle(addr)
