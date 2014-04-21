@@ -3,7 +3,6 @@ import . "trib"
 import "sync"
 import "log"
 import "fmt"
-import "strconv"
 
 type TServer struct {
 	lock  sync.Mutex
@@ -11,6 +10,11 @@ type TServer struct {
 }
 
 var _ *TServer = new(TServer)
+
+const (
+	USERS = "USERS"
+	POSTS = "POSTS"
+)
 
 // Utilities
 func validateUsername(user string) error {
@@ -30,6 +34,14 @@ func inArray(needle string, haystack[] string) bool {
 	return false
 }
 
+func makeNS(user string, store string) string {
+	return user + "::" + store
+}
+
+func makeFollowPair(who string, whom string) string {
+	return makeNS(who, whom)
+}
+
 //
 func (self *TServer) acquireBin(user string) Storage {
 	// TODO optimize by maintaining a list of recent connections (persistent)
@@ -37,8 +49,8 @@ func (self *TServer) acquireBin(user string) Storage {
 }
 
 func (self *TServer) userList(users *List) error {
-	b := self.acquireBin("USERS")
-	e := b.ListGet("USERS", users)
+	b := self.acquireBin(USERS)
+	e := b.ListGet(USERS, users)
 	if e != nil { return e }
 	return nil
 }
@@ -75,8 +87,8 @@ func (self TServer) SignUp(user string) error {
 	}
 
 	var ok bool
-	b := self.acquireBin("USERS")
-	kv := KeyValue{ Key: "USERS", Value: user }
+	b := self.acquireBin(USERS)
+	kv := KeyValue{ Key: USERS, Value: user }
 
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -104,35 +116,21 @@ func (self TServer) Follow(who, whom string) error {
 	}
 
 	b := self.acquireBin(who)
-	var fq string
-	e = b.Get(who + "::" + "FQ", &fq)
-	var FQ int
-	if e != nil { return e }
-	if fq == "" {
-		FQ = 0
-	} else {
-		FQ, e = strconv.Atoi(fq)
-		if e != nil { return e }
-		if FQ >= MaxFollowing {
-			return fmt.Errorf("You have already reached the limit!")
-		}
+
+	following, err := self.Following(who)
+	if err != nil {
+		return err
 	}
 
-	// TODO make it atomic using redo-logging
+	if len(following) >= MaxFollowing {
+		return fmt.Errorf("You have already reached the limit!")
+	}
+
 	var OK bool
 
 	// TODO Store Clock
-	e = b.Set(&KeyValue{ Key: who + "_" + whom, Value: "FOLLOWING" }, &OK)
-	if e != nil { return e }
+	e = b.Set(&KeyValue{ Key: makeFollowPair(who, whom), Value: "FOLLOWING" }, &OK)
 	if OK != true { return fmt.Errorf("Unable to create new follower!") }
-
-	e = b.ListAppend(&KeyValue{ Key: who + "::FOLLOWING", Value: whom }, &OK)
-	if e != nil { return e }
-	if OK != true { return fmt.Errorf("Unable to update list of followers!") }
-
-	FQ = FQ + 1
-	e = b.Set(&KeyValue{ Key: who + "::" + "FQ", Value: strconv.Itoa(FQ + 1)}, &OK)
-	if OK != true { return fmt.Errorf("Unable to update number of followers!") }
 
 	return e
 }
@@ -153,10 +151,9 @@ func (self TServer) IsFollowing(who, whom string) (bool, error) {
 
 	b := self.acquireBin(who)
 
-	// TODO make it atomic using redo-logging
 	var temp string
-	e := b.Get(who + "_" + whom, &temp)
-	if temp != "" {
+	e := b.Get(makeFollowPair(who, whom), &temp)
+	if temp != "" && temp != "0" {
 		return true, e
 	} else {
 		return false, e
@@ -164,49 +161,54 @@ func (self TServer) IsFollowing(who, whom string) (bool, error) {
 }
 
 func (self TServer) Unfollow(who, whom string) error {
-	/*
+
 	if who == whom {
-		return fmt.Errorf("cannot unfollow oneself")
+		return fmt.Errorf("cannot unfollow oneself!")
 	}
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	b, e := self.IsFollowing(who, whom)
 
-	uwho, e := self.findUser(who)
 	if e != nil {
 		return e
 	}
 
-	uwhom, e := self.findUser(whom)
-	if e != nil {
-		return e
-	}
-
-	if !uwho.isFollowing(whom) {
+	if b != true {
 		return fmt.Errorf("user %q is not following %q", who, whom)
 	}
 
-	uwho.unfollow(whom)
-	uwhom.removeFollower(who)
-	return nil
-	*/
-	return nil
+	bin := self.acquireBin(who)
+	var OK bool
+	e = bin.Set(&KeyValue{ Key: makeFollowPair(who, whom), Value: "" }, &OK)
+
+	if OK != true {
+		return fmt.Errorf("failed while %s doing unflow for %s", who, whom)
+	}
+
+	return e
 }
 
 func (self TServer) Following(who string) ([]string, error) {
-	/*
-	self.lock.Lock()
-	defer self.lock.Unlock()
 
-	uwho, e := self.findUser(who)
-	if e != nil {
-		return nil, e
+	if self.userExists(who) != true {
+		return nil, fmt.Errorf("user %s does not exist!", who)
 	}
 
-	ret := uwho.listFollowing()
-	return ret, nil
-	*/
-	return nil, nil
+	b := self.acquireBin(who)
+	var list List
+	var p Pattern
+	p.Prefix = makeFollowPair(who,"")
+	e := b.Keys(&p, &list)
+
+	if e != nil {
+		return make([]string, 0), e
+	}
+
+	var r []string
+	for i := range list.L {
+		r = append(r, list.L[i])
+	}
+
+	return r, nil
 }
 
 func (self TServer) Post(user, post string, c uint64) error {

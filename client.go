@@ -63,6 +63,14 @@ func (self *client) Keys(p *Pattern, list *List) error {
 		}
 	}
 
+	if list == nil {
+		list = new(List)
+	}
+
+	if list.L == nil {
+		list.L = make([]string, 0)
+	}
+
 	return err;
 }
 
@@ -72,10 +80,7 @@ func (self *client) Keys(p *Pattern, list *List) error {
 func (self *client) ListGet(key string, list *List) error {
 	err := self.CheckConnection();
 
-	if list == nil {
-		list = new(List);
-	}
-
+	list.L = nil
 	if err == nil {
 		err = self.handler.Call("Storage.ListGet", key, list);
 		if err == rpc.ErrShutdown {
@@ -83,6 +88,11 @@ func (self *client) ListGet(key string, list *List) error {
 			err = self.ListGet(key, list);
 		}
 	}
+
+	if list.L == nil {
+		list.L = make([]string, 0)
+	}
+
 	return err;
 }
 
@@ -113,10 +123,7 @@ func (self *client) ListRemove(kv *KeyValue, n *int) error {
 func (self *client) ListKeys(p *Pattern, list *List) error {
 	err := self.CheckConnection();
 
-	if list == nil {
-		list = new(List);
-	}
-
+	list.L = nil
 	if err == nil {
 		err = self.handler.Call("Storage.ListKeys", p, list);
 		if err == rpc.ErrShutdown {
@@ -124,6 +131,11 @@ func (self *client) ListKeys(p *Pattern, list *List) error {
 			err = self.ListKeys(p, list);
 		}
 	}
+
+	if list.L == nil {
+		list.L = make([]string, 0)
+	}
+
 	return err;
 }
 
