@@ -5,7 +5,7 @@ import (
 )
 
 func NewBinClient(backs []string) BinStorage {
-	panic("todo")
+	return BinStorageWrapper{ back_ends: backs }
 }
 
 func ServeKeeper(kc *KeeperConfig) error {
