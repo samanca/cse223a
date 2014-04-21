@@ -15,6 +15,6 @@ func ServeKeeper(kc *KeeperConfig) error {
 }
 
 func NewFront(s BinStorage) Server {
-	panic("todo")
+	return TServer { storage: s}
 }
 
