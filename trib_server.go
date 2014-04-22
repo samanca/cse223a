@@ -7,6 +7,7 @@ import "strings"
 import "time"
 import "encoding/json"
 import "sort"
+import "math"
 
 /*
  * TODO replace users-list with KeyValue pairs (performance)
@@ -55,6 +56,16 @@ func removeNS(entry string) string {
 	} else {
 		return EMPTY_STRING
 	}
+}
+
+func Append(slice []string, element string) []string {
+	n := int(math.Max(float64(len(slice)), 0))
+	list := make([]string, n + 1)
+	for i := range slice {
+		list[i] = slice[i]
+	}
+	list[n] = element
+	return list
 }
 
 // Helpers
@@ -297,6 +308,8 @@ func (self TServer) Home(user string) ([]*Trib, error) {
 	if e != nil {
 		return make([]*Trib, 0), e
 	}
+
+	list.L = Append(list.L, user)
 
 	// TODO make parallel calls to enhance performance here (optimization)
 	var tc int = 0
