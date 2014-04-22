@@ -383,3 +383,5 @@ func (self *TServer) Tribs(user string) ([]*Trib, error) {
 
 	return ts.tribs, nil
 }
+
+var _ Server = new(TServer)
