@@ -4,6 +4,14 @@ import "sync"
 import "log"
 import "fmt"
 import "strings"
+import "time"
+import "encoding/json"
+import "sort"
+
+/*
+ * TODO replace users-list with KeyValue pairs (performance)
+ * TODO do proper locking (consistency)
+ */
 
 type TServer struct {
 	lock  sync.Mutex
@@ -50,7 +58,39 @@ func removeNS(entry string) string {
 	}
 }
 
-//
+// Helpers
+type Tribs struct {
+	tribs []*Trib
+}
+
+func (d Tribs) Len() int {
+	return len(d.tribs)
+}
+
+func (d Tribs) Swap(i, j int) {
+	d.tribs[i], d.tribs[j] = d.tribs[j], d.tribs[i]
+}
+
+func (d Tribs) Less(i, j int) bool {
+	if d.tribs[i].Clock < d.tribs[j].Clock {
+		return true
+	} else if d.tribs[i].Clock == d.tribs[j].Clock {
+		if d.tribs[i].Time.Before(d.tribs[j].Time) {
+			return true
+		} else if d.tribs[i].Time.Equal(d.tribs[j].Time) {
+			if d.tribs[i].User < d.tribs[j].User {
+				return true
+			} else if d.tribs[i].User == d.tribs[j].User {
+				if d.tribs[i].Message < d.tribs[j].Message {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// Service Methods
 func (self *TServer) acquireBin(user string) Storage {
 	// TODO optimize by maintaining a list of recent connections (persistent)
 	return self.storage.Bin(user)
@@ -84,7 +124,7 @@ func (self *TServer) getUsers() []string {
 	return users.L
 }
 
-// Service Interfaces
+// Interfaces
 func (self TServer) SignUp(user string) error {
 
 	err := validateUsername(user)
@@ -214,33 +254,35 @@ func (self TServer) Following(who string) ([]string, error) {
 }
 
 func (self TServer) Post(user, post string, c uint64) error {
-	/*
-	if len(post) > trib.MaxTribLen {
+
+	if len(post) > MaxTribLen {
 		return fmt.Errorf("trib too long")
 	}
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	if !self.userExists(user) {
+		return fmt.Errorf("user does not exist!")
+	}
 
-	u, e := self.findUser(user)
+	t := new(Trib)
+	t.Time = time.Now()
+	t.User = user
+	t.Message = post
+	t.Clock = c;
+
+	j, e := json.Marshal(t)
 	if e != nil {
-		return e
+		return fmt.Errorf("error while marshaling the post!")
 	}
 
-	if self.seq < c {
-		self.seq = c
-	}
-	self.seq++
-	if self.seq == math.MaxUint64 {
-		panic("run out of seq number")
+	var OK bool
+	b := self.acquireBin(user)
+	e = b.ListAppend(&KeyValue{ Key:makeNS(user, POSTS), Value: string(j) }, &OK)
+
+	if OK != true {
+		return fmt.Errorf("failed while trying to save the post!")
 	}
 
-	t := time.Now()
-	u.post(user, post, self.seq, t)
-
-	return nil
-	*/
-	return nil
+	return e
 }
 
 func (self TServer) Home(user string) ([]*Trib, error) {
@@ -259,16 +301,36 @@ func (self TServer) Home(user string) ([]*Trib, error) {
 }
 
 func (self TServer) Tribs(user string) ([]*Trib, error) {
-	/*
-	self.lock.Lock()
-	defer self.lock.Unlock()
 
-	u, e := self.findUser(user)
-	if e != nil {
-		return nil, e
+	if !self.userExists(user) {
+		return make([]*Trib, 0), fmt.Errorf("user does not exist!")
 	}
 
-	return u.listTribs(), nil
-	*/
-	return nil, nil
+	var list List
+	b := self.acquireBin(user)
+	e := b.ListGet(makeNS(user, POSTS), &list)
+
+	if e != nil {
+		return make([]*Trib, 0), e
+	}
+
+	if len(list.L) > MaxTribFetch {
+		list.L = list.L[0:99]
+	}
+
+	tribs := make([]*Trib, len(list.L))
+	for i := range list.L {
+		var t Trib
+		e = json.Unmarshal([]byte(list.L[i]), &t)
+		if e != nil {
+			return make([]*Trib, 0), e
+		}
+		tribs[i] = &t
+	}
+
+	ts := new(Tribs)
+	ts.tribs = tribs
+	sort.Sort(ts)
+
+	return ts.tribs, nil
 }
