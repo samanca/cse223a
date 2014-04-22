@@ -10,7 +10,6 @@ import "sort"
 
 /*
  * TODO replace users-list with KeyValue pairs (performance)
- * TODO do proper locking (consistency)
  */
 
 type TServer struct {
@@ -286,18 +285,49 @@ func (self TServer) Post(user, post string, c uint64) error {
 }
 
 func (self TServer) Home(user string) ([]*Trib, error) {
-	/*
-	self.lock.Lock()
-	defer self.lock.Unlock()
 
-	u, e := self.findUser(user)
-	if e != nil {
-		return nil, e
+	if !self.userExists(user) {
+		return make([]*Trib, 0), fmt.Errorf("user does not exist!")
 	}
 
-	return u.listHome(), nil
-	*/
-	return nil, nil
+	var list List
+	b := self.acquireBin(user)
+	e := b.ListGet(makeNS(user, FOLLOWING), &list)
+
+	if e != nil {
+		return make([]*Trib, 0), e
+	}
+
+	// TODO make parallel calls to enhance performance here (optimization)
+	var tc int = 0
+	fts := make([]Tribs, len(list.L))
+	for i := range list.L {
+		t, err := self.Tribs(list.L[i])
+		if err != nil {
+			return make([]*Trib, 0), err
+		}
+		fts[i].tribs = t
+		tc += len(t)
+	}
+
+	tribs := make([]*Trib, tc)
+	tc = 0
+	for i := range fts {
+		for j := range fts[i].tribs {
+			tribs[tc] = fts[i].tribs[j]
+			tc++
+		}
+	}
+
+	var temp Tribs
+	temp.tribs = tribs
+	sort.Sort(temp)
+
+	if len(temp.tribs) > MaxTribFetch {
+		temp.tribs = temp.tribs[0:MaxTribFetch - 1]
+	}
+
+	return temp.tribs, nil
 }
 
 func (self TServer) Tribs(user string) ([]*Trib, error) {
@@ -315,7 +345,7 @@ func (self TServer) Tribs(user string) ([]*Trib, error) {
 	}
 
 	if len(list.L) > MaxTribFetch {
-		list.L = list.L[0:99]
+		list.L = list.L[0:MaxTribFetch - 1]
 	}
 
 	tribs := make([]*Trib, len(list.L))
