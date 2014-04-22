@@ -3,6 +3,7 @@ import . "trib"
 import "sync"
 import "log"
 import "fmt"
+import "strings"
 
 type TServer struct {
 	lock  sync.Mutex
@@ -14,6 +15,8 @@ var _ *TServer = new(TServer)
 const (
 	USERS = "USERS"
 	POSTS = "POSTS"
+	FOLLOWING = "FOLLOWING"
+	EMPTY_STRING = ""
 )
 
 // Utilities
@@ -38,8 +41,13 @@ func makeNS(user string, store string) string {
 	return user + "::" + store
 }
 
-func makeFollowPair(who string, whom string) string {
-	return makeNS(who, whom)
+func removeNS(entry string) string {
+	t := strings.Split(entry, "::")
+	if len(t) == 2 {
+		return t[1]
+	} else {
+		return EMPTY_STRING
+	}
 }
 
 //
@@ -127,9 +135,7 @@ func (self TServer) Follow(who, whom string) error {
 	}
 
 	var OK bool
-
-	// TODO Store Clock
-	e = b.Set(&KeyValue{ Key: makeFollowPair(who, whom), Value: "FOLLOWING" }, &OK)
+	e = b.ListAppend(&KeyValue{ Key: makeNS(who, FOLLOWING), Value: whom}, &OK)
 	if OK != true { return fmt.Errorf("Unable to create new follower!") }
 
 	return e
@@ -149,15 +155,18 @@ func (self TServer) IsFollowing(who, whom string) (bool, error) {
 		return false, fmt.Errorf("Target user does not exist!")
 	}
 
-	b := self.acquireBin(who)
-
-	var temp string
-	e := b.Get(makeFollowPair(who, whom), &temp)
-	if temp != "" && temp != "0" {
-		return true, e
-	} else {
+	users, e := self.Following(who)
+	if e != nil {
 		return false, e
 	}
+
+	for i := range users {
+		if users[i] == whom {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (self TServer) Unfollow(who, whom string) error {
@@ -177,11 +186,11 @@ func (self TServer) Unfollow(who, whom string) error {
 	}
 
 	bin := self.acquireBin(who)
-	var OK bool
-	e = bin.Set(&KeyValue{ Key: makeFollowPair(who, whom), Value: "" }, &OK)
+	var n int
+	e = bin.ListRemove(&KeyValue{ Key: makeNS(who, FOLLOWING), Value: whom }, &n)
 
-	if OK != true {
-		return fmt.Errorf("failed while %s doing unflow for %s", who, whom)
+	if n != 1 {
+		return fmt.Errorf("expecting to see 1 while %s doing unflow for %s, %d seen", who, whom, n)
 	}
 
 	return e
@@ -195,20 +204,13 @@ func (self TServer) Following(who string) ([]string, error) {
 
 	b := self.acquireBin(who)
 	var list List
-	var p Pattern
-	p.Prefix = makeFollowPair(who,"")
-	e := b.Keys(&p, &list)
+	e := b.ListGet(makeNS(who, FOLLOWING), &list)
 
 	if e != nil {
 		return make([]string, 0), e
 	}
 
-	var r []string
-	for i := range list.L {
-		r = append(r, list.L[i])
-	}
-
-	return r, nil
+	return list.L, nil
 }
 
 func (self TServer) Post(user, post string, c uint64) error {
