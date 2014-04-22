@@ -14,11 +14,10 @@ import "math"
  */
 
 type TServer struct {
-	lock  sync.Mutex
+	followLock sync.Mutex
+	signupLock sync.Mutex
 	storage BinStorage
 }
-
-var _ *TServer = new(TServer)
 
 const (
 	USERS = "USERS"
@@ -135,10 +134,13 @@ func (self *TServer) getUsers() []string {
 }
 
 // Interfaces
-func (self TServer) SignUp(user string) error {
+func (self *TServer) SignUp(user string) error {
 
 	err := validateUsername(user)
 	if err != nil { return err }
+
+	self.signupLock.Lock()
+	defer self.signupLock.Unlock()
 
 	if self.userExists(user) {
 		return fmt.Errorf("user %q already exists!", user)
@@ -148,8 +150,6 @@ func (self TServer) SignUp(user string) error {
 	b := self.acquireBin(USERS)
 	kv := KeyValue{ Key: USERS, Value: user }
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
 	e := b.ListAppend(&kv, &ok)
 
 	if e == nil && !ok {
@@ -159,12 +159,15 @@ func (self TServer) SignUp(user string) error {
 	return e
 }
 
-func (self TServer) ListUsers() ([]string, error) {
+func (self *TServer) ListUsers() ([]string, error) {
 	// TODO optimize by first looking at local cache
 	return self.getUsers(), nil;
 }
 
-func (self TServer) Follow(who, whom string) error {
+func (self *TServer) Follow(who, whom string) error {
+
+	self.followLock.Lock()
+	defer self.followLock.Unlock()
 
 	t, e := self.IsFollowing(who, whom)
 
@@ -191,7 +194,7 @@ func (self TServer) Follow(who, whom string) error {
 	return e
 }
 
-func (self TServer) IsFollowing(who, whom string) (bool, error) {
+func (self *TServer) IsFollowing(who, whom string) (bool, error) {
 
 	if who == whom {
 		return false, fmt.Errorf("You cannot become your follower!")
@@ -219,7 +222,10 @@ func (self TServer) IsFollowing(who, whom string) (bool, error) {
 	return false, nil
 }
 
-func (self TServer) Unfollow(who, whom string) error {
+func (self *TServer) Unfollow(who, whom string) error {
+
+	self.followLock.Lock()
+	defer self.followLock.Unlock()
 
 	if who == whom {
 		return fmt.Errorf("cannot unfollow oneself!")
@@ -246,7 +252,7 @@ func (self TServer) Unfollow(who, whom string) error {
 	return e
 }
 
-func (self TServer) Following(who string) ([]string, error) {
+func (self *TServer) Following(who string) ([]string, error) {
 
 	if self.userExists(who) != true {
 		return nil, fmt.Errorf("user %s does not exist!", who)
@@ -263,7 +269,7 @@ func (self TServer) Following(who string) ([]string, error) {
 	return list.L, nil
 }
 
-func (self TServer) Post(user, post string, c uint64) error {
+func (self *TServer) Post(user, post string, c uint64) error {
 
 	if len(post) > MaxTribLen {
 		return fmt.Errorf("trib too long")
@@ -295,7 +301,7 @@ func (self TServer) Post(user, post string, c uint64) error {
 	return e
 }
 
-func (self TServer) Home(user string) ([]*Trib, error) {
+func (self *TServer) Home(user string) ([]*Trib, error) {
 
 	if !self.userExists(user) {
 		return make([]*Trib, 0), fmt.Errorf("user does not exist!")
@@ -343,7 +349,7 @@ func (self TServer) Home(user string) ([]*Trib, error) {
 	return temp.tribs, nil
 }
 
-func (self TServer) Tribs(user string) ([]*Trib, error) {
+func (self *TServer) Tribs(user string) ([]*Trib, error) {
 
 	if !self.userExists(user) {
 		return make([]*Trib, 0), fmt.Errorf("user does not exist!")

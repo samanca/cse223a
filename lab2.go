@@ -15,6 +15,6 @@ func ServeKeeper(kc *KeeperConfig) error {
 }
 
 func NewFront(s BinStorage) Server {
-	return TServer { storage: s}
+	return &TServer { storage: s}
 }
 
