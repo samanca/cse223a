@@ -20,5 +20,5 @@ func (self *BinStorageWrapper) Map(name string) uint32 {
 
 func (self BinStorageWrapper) Bin(name string) Storage {
 	server := self.back_ends[self.Map(name)]
-	return &client{ addr: server, connected: false, ns: name }
+	return &client{ addr: server, ns: name }
 }

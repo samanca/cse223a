@@ -38,7 +38,7 @@ func (self *keeper) run() error {
 			address: self.config.Backs[i],
 			lastAck: 0,
 			status: ALIVE,
-			handler: &client{addr: self.config.Backs[i], connected: false},
+			handler: &client{ addr: self.config.Backs[i] },
 		})
 	}
 
