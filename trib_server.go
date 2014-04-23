@@ -3,7 +3,6 @@ import . "trib"
 import "sync"
 import "log"
 import "fmt"
-import "strings"
 import "time"
 import "encoding/json"
 import "sort"
@@ -42,19 +41,6 @@ func inArray(needle string, haystack[] string) bool {
 		if haystack[i] == needle { return true }
 	}
 	return false
-}
-
-func makeNS(user string, store string) string {
-	return user + "::" + store
-}
-
-func removeNS(entry string) string {
-	t := strings.Split(entry, "::")
-	if len(t) == 2 {
-		return t[1]
-	} else {
-		return EMPTY_STRING
-	}
 }
 
 func Append(slice []string, element string) []string {
@@ -188,7 +174,7 @@ func (self *TServer) Follow(who, whom string) error {
 	}
 
 	var OK bool
-	e = b.ListAppend(&KeyValue{ Key: makeNS(who, FOLLOWING), Value: whom}, &OK)
+	e = b.ListAppend(&KeyValue{ Key: FOLLOWING, Value: whom}, &OK)
 	if OK != true { return fmt.Errorf("Unable to create new follower!") }
 
 	return e
@@ -243,7 +229,7 @@ func (self *TServer) Unfollow(who, whom string) error {
 
 	bin := self.acquireBin(who)
 	var n int
-	e = bin.ListRemove(&KeyValue{ Key: makeNS(who, FOLLOWING), Value: whom }, &n)
+	e = bin.ListRemove(&KeyValue{ Key: FOLLOWING, Value: whom }, &n)
 
 	if n != 1 {
 		return fmt.Errorf("expecting to see 1 while %s doing unflow for %s, %d seen", who, whom, n)
@@ -260,7 +246,7 @@ func (self *TServer) Following(who string) ([]string, error) {
 
 	b := self.acquireBin(who)
 	var list List
-	e := b.ListGet(makeNS(who, FOLLOWING), &list)
+	e := b.ListGet(FOLLOWING, &list)
 
 	if e != nil {
 		return make([]string, 0), e
@@ -292,7 +278,7 @@ func (self *TServer) Post(user, post string, c uint64) error {
 
 	var OK bool
 	b := self.acquireBin(user)
-	e = b.ListAppend(&KeyValue{ Key:makeNS(user, POSTS), Value: string(j) }, &OK)
+	e = b.ListAppend(&KeyValue{ Key:POSTS, Value: string(j) }, &OK)
 
 	if OK != true {
 		return fmt.Errorf("failed while trying to save the post!")
@@ -309,7 +295,7 @@ func (self *TServer) Home(user string) ([]*Trib, error) {
 
 	var list List
 	b := self.acquireBin(user)
-	e := b.ListGet(makeNS(user, FOLLOWING), &list)
+	e := b.ListGet(FOLLOWING, &list)
 
 	if e != nil {
 		return make([]*Trib, 0), e
@@ -357,7 +343,7 @@ func (self *TServer) Tribs(user string) ([]*Trib, error) {
 
 	var list List
 	b := self.acquireBin(user)
-	e := b.ListGet(makeNS(user, POSTS), &list)
+	e := b.ListGet(POSTS, &list)
 
 	if e != nil {
 		return make([]*Trib, 0), e

@@ -1,12 +1,15 @@
 package triblab
 import . "trib"
 import "net/rpc"
+//import "fmt"
+import "strings"
 
 type client struct {
 
 	addr string
 	handler *rpc.Client
 	connected bool
+	ns string
 
 }
 
@@ -20,13 +23,30 @@ func (self *client) CheckConnection() error {
 	return nil;
 }
 
+func (self *client) makeNS(key string) string {
+	if (self.ns == "") {
+		return key
+	} else {
+		return self.ns + "::" + key
+	}
+}
+
+func removeNS(entry string) string {
+	t := strings.Split(entry, "::")
+	if len(t) == 2 {
+		return t[1]
+	} else {
+		return t[0]
+	}
+}
+
 /*
  * Implementing KeyString
  */
 func (self *client) Get(key string, value *string) error {
 	err := self.CheckConnection();
 	if err == nil {
-		err = self.handler.Call("Storage.Get", key, value);
+		err = self.handler.Call("Storage.Get", self.makeNS(key), value);
 		if err == rpc.ErrShutdown {
 			self.connected = false;
 			err = self.Get(key, value);
@@ -38,11 +58,11 @@ func (self *client) Get(key string, value *string) error {
 func (self *client) Set(kv *KeyValue, succ *bool) error {
 	err := self.CheckConnection();
 	if err == nil {
-		err = self.handler.Call("Storage.Set", kv, succ);
+		kv2 := KeyValue{ Key: self.makeNS(kv.Key), Value: kv.Value }
+		err = self.handler.Call("Storage.Set", &kv2, succ);
 		if err == rpc.ErrShutdown {
 			self.connected = false;
 			err = self.Set(kv, succ);
-			*succ = false;
 		}
 	}
 	return err;
@@ -56,7 +76,8 @@ func (self *client) Keys(p *Pattern, list *List) error {
 	}
 
 	if err == nil {
-		err = self.handler.Call("Storage.Keys", p, list);
+		p2 := Pattern{ Prefix: self.makeNS(p.Prefix), Suffix: p.Suffix }
+		err = self.handler.Call("Storage.Keys", &p2, list);
 		if err == rpc.ErrShutdown {
 			self.connected = false;
 			err = self.Keys(p, list);
@@ -69,6 +90,10 @@ func (self *client) Keys(p *Pattern, list *List) error {
 
 	if list.L == nil {
 		list.L = make([]string, 0)
+	} else {
+		for i := range list.L {
+			list.L[i] = removeNS(list.L[i])
+		}
 	}
 
 	return err;
@@ -82,7 +107,7 @@ func (self *client) ListGet(key string, list *List) error {
 
 	list.L = nil
 	if err == nil {
-		err = self.handler.Call("Storage.ListGet", key, list);
+		err = self.handler.Call("Storage.ListGet", self.makeNS(key), list);
 		if err == rpc.ErrShutdown {
 			self.connected = false;
 			err = self.ListGet(key, list);
@@ -99,7 +124,8 @@ func (self *client) ListGet(key string, list *List) error {
 func (self *client) ListAppend(kv *KeyValue, succ *bool) error {
 	err := self.CheckConnection();
 	if err == nil {
-		err = self.handler.Call("Storage.ListAppend", kv, succ);
+		kv2 := KeyValue{ Key: self.makeNS(kv.Key), Value: kv.Value }
+		err = self.handler.Call("Storage.ListAppend", &kv2, succ);
 		if err == rpc.ErrShutdown {
 			self.connected = false;
 			err = self.ListAppend(kv, succ);
@@ -111,7 +137,8 @@ func (self *client) ListAppend(kv *KeyValue, succ *bool) error {
 func (self *client) ListRemove(kv *KeyValue, n *int) error {
 	err := self.CheckConnection();
 	if err == nil {
-		err = self.handler.Call("Storage.ListRemove", kv, n);
+		kv2 := KeyValue{ Key: self.makeNS(kv.Key), Value: kv.Value }
+		err = self.handler.Call("Storage.ListRemove", &kv2, n);
 		if err == rpc.ErrShutdown {
 			self.connected = false;
 			err = self.ListRemove(kv, n);
@@ -125,7 +152,8 @@ func (self *client) ListKeys(p *Pattern, list *List) error {
 
 	list.L = nil
 	if err == nil {
-		err = self.handler.Call("Storage.ListKeys", p, list);
+		p2 := Pattern{ Prefix: self.makeNS(p.Prefix), Suffix: p.Suffix }
+		err = self.handler.Call("Storage.ListKeys", &p2, list);
 		if err == rpc.ErrShutdown {
 			self.connected = false;
 			err = self.ListKeys(p, list);
@@ -134,6 +162,10 @@ func (self *client) ListKeys(p *Pattern, list *List) error {
 
 	if list.L == nil {
 		list.L = make([]string, 0)
+	} else {
+		for i := range list.L {
+			list.L[i] = removeNS(list.L[i])
+		}
 	}
 
 	return err;
