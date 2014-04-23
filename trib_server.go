@@ -16,6 +16,7 @@ type TServer struct {
 	followLock sync.Mutex
 	signupLock sync.Mutex
 	storage BinStorage
+	userCache []string
 }
 
 const (
@@ -85,6 +86,14 @@ func (d Tribs) Less(i, j int) bool {
 	return false
 }
 
+func userKey(user string) string {
+	return "U" + user
+}
+
+func isEmpty(str string) bool {
+	return str == EMPTY_STRING
+}
+
 // Service Methods
 func (self *TServer) acquireBin(user string) Storage {
 	// TODO optimize by maintaining a list of recent connections (persistent)
@@ -92,21 +101,28 @@ func (self *TServer) acquireBin(user string) Storage {
 }
 
 func (self *TServer) userList(users *List) error {
-	b := self.acquireBin(USERS)
-	e := b.ListGet(USERS, users)
-	if e != nil { return e }
+	if (len(self.userCache) < MinListUser) {
+		b := self.acquireBin(USERS)
+		e := b.Keys(&Pattern{ Prefix: "U", Suffix: "" }, users)
+		if e != nil { return e }
+		for i := range users.L {
+			users.L[i] = users.L[i][1 : len(users.L[i])]
+		}
+		self.userCache = users.L
+	}
+	users.L = self.userCache
 	return nil
 }
 
 func (self *TServer) userExists(user string) bool {
-	// TODO optimize by first looking at local cache
-	users := new(List)
-	e := self.userList(users)
+	var v string
+	b := self.acquireBin(USERS)
+	e := b.Get(userKey(user), &v)
 	if e != nil {
 		log.Printf("Error while looking for user %s: %s\n", user, e)
 		return true;
 	}
-	return inArray(user, users.L)
+	return !isEmpty(v)
 }
 
 func (self *TServer) getUsers() []string {
@@ -134,9 +150,8 @@ func (self *TServer) SignUp(user string) error {
 
 	var ok bool
 	b := self.acquireBin(USERS)
-	kv := KeyValue{ Key: USERS, Value: user }
-
-	e := b.ListAppend(&kv, &ok)
+	kv := KeyValue{ Key: userKey(user), Value: "Registered" }
+	e := b.Set(&kv, &ok)
 
 	if e == nil && !ok {
 		return fmt.Errorf("failed creating new user!")
