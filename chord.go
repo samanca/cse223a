@@ -1,5 +1,7 @@
 package triblab
-import "trib"
+//import "trib"
+
+//comment pushed by vineet to check push
 
 type Chord struct {
 
