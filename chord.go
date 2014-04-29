@@ -1,6 +1,8 @@
 package triblab
 import "trib"
 
+
+//comment by vineet
 type Chord struct {
 
 }
