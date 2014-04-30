@@ -30,6 +30,56 @@ type keeper struct {
 	workers		[]worker
 }
 
+
+//Maintain Node and Ring for the Chord Ring information
+type node struct {
+    succ string //succ ip
+    prev string //prev ip
+    ip string //its own ip
+    start uint32 //start of its arc
+    end uint32 //end of its arc onr ring
+}
+
+//Initially there is no node in the ring
+var ring []node
+
+//TODO-return ??
+//TODO- is the hash value returned uitn32?
+func addNodetoRing(ip string, ring []node){
+    var Node node
+    Node.ip = ip
+    val := getHash(ip)
+    if (len(ring)==0){
+        //TODO-Is this empty string?
+        Node.succ = make(string,0)
+        Node.prev = make (string,0)
+        Node.start = 0
+        Node.end = 2^(32) -1 //TODO-better way to write this
+    } else{
+    for i:=0;i<len(Ring);i++{
+        if val > ring[i].start && val < ring[i].end{
+            Node.succ = ring[i].succ
+            Node.prev = ring[i].ip
+            Node.start = ring[i].end
+            Node.end = val
+            ring[i].succ = Node.ip
+            break
+        }else {
+            fmt.Errorf("some error, the node must be inserted somewhere")
+        }
+    }
+    //Fix the successor's arc and prev value
+    for j:=0;j<len(Ring);j++{
+        if ring[j].ip==Node.succ{
+            ring[j].prev = Node.ip
+            ring[j].start = val //TODO-or os this val + 1?
+            break
+        }
+    }
+}
+    ring = append(Node) //TODO-is this how you use append
+}
+
 //keeps a count mod 3. Everytime it is 0, we call the Clock().
 //When it is 0,1, or 2, we do the node join/crash check
 var count int = -1
@@ -88,7 +138,17 @@ func (self *keeper) run() error {
         if node_status[i]==false{
             if cur_node_status==true{
             //new node has joined
-            //TODO-modify ring, call replication
+            //TODO-modify ring
+            var next,prev string
+            addNodetoRing(self.config.Backs[i],&ring,&next,&prev)
+
+            //TODO-add successor/previous keys on the corresponding nodes
+            self.workers[i].handler.Set("NEXT",&next)
+            self.workers[i].Set("PREV",&prev)
+
+            //TODO-call replication
+
+
             }else{
                 //Nothing to do
             }
