@@ -30,6 +30,22 @@ type keeper struct {
 	workers		[]worker
 }
 
+//keeps a count mod 3. Everytime it is 0, we call the Clock().
+//When it is 0,1, or 2, we do the node join/crash check
+var count int = -1
+
+//Table maintained by Keeper for all the nodes
+//TODO-300 is static. Can we maintain this table dynamic while sharing it between keepers
+var node_status []bool = make ([]bool,300)
+
+//TODO-only works for one keeper. The range needs to be modified when working with multiple keepers
+func (self *keeper) node_status() error{
+    for i:= range self.config.Backs {
+        node_status[i] = false
+    }
+    return nil
+}
+
 func (self *keeper) run() error {
 
 	// initialize
@@ -44,8 +60,50 @@ func (self *keeper) run() error {
 
 	for {
 		// Heartbeat period
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
+        count = (count+1)%3
 
+    //Perform the following node check operation everytime
+        key := "STATUS"
+        value:= "TRUE"
+        keyvalue := KeyValue{Key:key,Value:value}
+        succ:= false
+
+    for i:= range self.config.Backs {
+        cur_node_status := false
+        err_node_status := self.workers[i].handler.Set(&keyvalue, &succ)
+
+        if err_node_status!=nil{
+            if(succ==true){
+                //the operation had succeeded, the node is up
+                cur_node_status=true
+            }else{
+                //node is down
+                cur_node_status=false
+            }
+        }else{
+            cur_node_status=true
+        }
+
+        if node_status[i]==false{
+            if cur_node_status==true{
+            //new node has joined
+            //TODO-modify ring, call replication
+            }else{
+                //Nothing to do
+            }
+        }else {
+            if cur_node_status==true{
+                //Nothing to do
+            }else{
+                //Node has failed
+                //TODO-Modify ring, call replication
+            }
+        }
+    }
+
+    //Perform the following clock sync only every 3rd second
+     if count==2{
 		// Query workers
 		var maxClock uint64
 		for i := range self.workers {
@@ -91,6 +149,7 @@ func (self *keeper) run() error {
 				}
 			}
 		}
+     }
 	}
 	return errors.New("Keeper terminated unexpectedly!");
 }

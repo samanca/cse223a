@@ -1,5 +1,5 @@
 package triblab
-import "trib"
+//import "trib"
 
 
 //comment by vineet
