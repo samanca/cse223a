@@ -52,7 +52,6 @@ func (self *Chord) initialize() error{
     return nil
 }
 
-//TODO-return ??
 func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
     var Node node
     Node.ip = ip
