@@ -1,5 +1,10 @@
 package triblab
 //import "trib"
+<<<<<<< HEAD
+
+//comment pushed by vineet to check push
+=======
+>>>>>>> 31d774d8a04b9680af4f121a7a519bb61030d6c8
 
 
 //comment by vineet
