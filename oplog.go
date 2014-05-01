@@ -1,4 +1,5 @@
 package triblab
+import . "trib"
 
 const (
 	LOG_KEY = "OPLOG"
