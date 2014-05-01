@@ -66,14 +66,15 @@ func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
         Node.end = MAXHASHVAL
         Node.ip=ip
     } else{
-        if len(Self.ring)==1{
+        if len(self.ring)==1{
 //TODO
         }else{
             if len(self.ring)==2{
                 //TODO
 
             }
-        }else{
+        }
+        //TODO-one more else condition
     for i:=0;i<len(self.ring);i++{
         if val > self.ring[i].start && val < self.ring[i].end{
             Node.succ = self.ring[i].succ
