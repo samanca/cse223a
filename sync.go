@@ -6,6 +6,7 @@ import "encoding/json"
  * TODO test if the method returns on the event of failure
  * TODO handle keeper failures (log buffer at BackEnds)
  * TODO we need to have persistent connections to back-ends
+ * TODO GC before return (close connections)
  */
 func run(backend string, replicas []string) error {
 
@@ -48,6 +49,22 @@ func run(backend string, replicas []string) error {
 	}
 }
 
+/*
+ * TODO do we need to have &b and &n outside this method?
+ */
 func doWhatISay(c *client, o *OpLogEntry) error {
-	return nil
+
+	var b bool
+	var n int
+
+	switch {
+	case o.opCode == OP_SET:
+		return c.Set(&o.data, &b)
+	case o.opCode == OP_LIST_APPEND:
+		return c.ListAppend(&o.data, &b)
+	case o.opCode == OP_LIST_REMOVE:
+		return c.ListRemove(&o.data, &n)
+	}
+
+	return nil;
 }
