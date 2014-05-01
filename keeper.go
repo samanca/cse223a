@@ -33,7 +33,6 @@ type keeper struct {
 	workers		[]worker
 }
 
-
 //Maintain Node and Ring for the Chord Ring information
 type node struct {
     succ string //succ ip
@@ -54,27 +53,38 @@ func (self *Chord) initialize() error{
 
 func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
     var Node node
-    Node.ip = ip
-
     val := getHash(ip)
+
+    //Folowing values are fixed regardless of node location in ring
+    Node.ip = ip
 
     if len(self.ring)==0{
         Node.succ = ""
         Node.prev = ""
         Node.start = 0
         Node.end = MAXHASHVAL
-        Node.ip=ip
     } else{
         if len(self.ring)==1{
-//TODO
+            Node.succ=self.ring[0].ip
+            Node.prev=self.ring[0].ip
+            Node.start=getHash(self.ring[0].ip)
+            Node.end=val
+
+            //Fix the other node - which is already existing
+            self.ring[0].succ=ip
+            self.ring[0].prev=ip
+            self.ring[0].start=val
+            self.ring[0].end=getHash(self.ring[0].ip)
+
+            //So, now both the nodes are fixed. The initial node covers the "0" key
         }else{
             if len(self.ring)==2{
                 //TODO
-
             }
         }
         //TODO-one more else condition
     for i:=0;i<len(self.ring);i++{
+      if self.ring[i].start<self.ring[i].end{
         if val > self.ring[i].start && val < self.ring[i].end{
             Node.succ = self.ring[i].succ
             Node.prev = self.ring[i].ip
@@ -83,9 +93,15 @@ func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
             //Fix the predecessor
             self.ring[i].succ = Node.ip
             break
-        }else {
-            return fmt.Errorf("some error, the node must be inserted somewhere")
         }
+      }else{
+        if self.ring[i].start<self.ring[i].end{
+            if ((val > self.ring[i].start && val < self.ring[i].end) || (val >= 0 && val <self.ring[i].end)){//TODO
+            return nil
+        }
+    }
+            return fmt.Errorf("some error, the node must be inserted somewhere")
+    }
     }
     //Fix the successor's arc and prev value
     for j:=0;j<len(self.ring);j++{
