@@ -2,6 +2,7 @@ package triblab
 //import . "trib"
 import "fmt"
 import "log"
+import "time"
 
 const (
 	PRIMARY = 0
@@ -55,42 +56,67 @@ func (self *ReplicationService) run() error {
 		// 5.0 - log replication statistics
 		log.Print("background replication: %d / %d", succ, len(live_back_ends))
 
+		// sleep
+		time.Sleep(1 * time.Second)
 	}
 	return fmt.Errorf("unexcpected behavior in replication service!")
 }
 
-func (self *ReplicationService) x(bin string) {
-
-}
-
-func (self *ReplicationService) replicate(source, dest string) {
-
-}
-
-func (self *ReplicationService) replicateThrough(source, dest, x string) {
-
-}
-
 func (self *ReplicationService) garbageCollector() {
+	// TODO
+}
 
+func (self *ReplicationService) replicate(c *chan bool, source, dest string) {
+	// TODO
+	*c<-true
+}
+
+func (self *ReplicationService) replicateThrough(c *chan bool, source, dest, x string) {
+	// TODO
+	*c<-true
 }
 
 func (self *ReplicationService) notifyJoin(node string) {
-
+	// TODO
 }
 
-func (self *ReplicationService) notifyLeave(add string) {
-	/*
+func (self *ReplicationService) notifyLeave(node string) error {
+
+	var err error
 	var prev_prev, prev, next, next_next, next_next_next string
 
-	// Query Chord
+	// query Chord
+	prev, err = self.chord.Prev_node_ip(node)
+	if err != nil { return err }
+	prev_prev, err = self.chord.Prev_node_ip(prev)
+	if err != nil { return err }
 
-	if prev == next || prev_prev == next {
-		return // nothing to do as |Chord| < 4
+	next, err = self.chord.Succ_node_ip(node)
+	if err != nil { return err }
+	next_next, err = self.chord.Succ_node_ip(next)
+	if err != nil { return err }
+
+	if prev == node || prev == next || prev_prev == next {
+		return nil // nothing to do as |Chord| < 4
 	}
 
-	go self.replicateThrough(node, next_next_next, next)
-	go self.replicate(prev, next_next)
-	go self.replicate(prev_prev, next)
-	*/
+	// init channel
+	c := make(chan bool)
+
+	// parallel replication
+	go self.replicateThrough(&c, node, next_next_next, next)
+	go self.replicate(&c, prev, next_next)
+	go self.replicate(&c, prev_prev, next)
+
+	// wait for join
+	var succ int = 0
+	for i := 0; i < 3; i++ {
+		if (<-c) { succ++ }
+	}
+
+	if succ == 3 {
+		return nil
+	} else {
+		return fmt.Errorf("%d replication(s) failed!", (3 - succ))
+	}
 }
