@@ -13,6 +13,9 @@ const (
 	DEAD = 3
 )
 
+const MAXHASHVAL = 2^(32) - 1
+//TODO-isthis correct MAXHASHVAL?
+
 type worker struct {
 	address		string
 	lastAck		uint64
@@ -41,70 +44,128 @@ type node struct {
 }
 
 //Initially there is no node in the ring
-var ring []node
+//var ring []node
+
+//create ring with zero nodes
+func (self *Chord) initialize() error{
+    self.ring = make([]node, 0)
+    return nil
+}
 
 //TODO-return ??
-//TODO- is the hash value returned uitn32?
-func addNodetoRing(ip string, ring []node, next *string, prev *string){
+func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
     var Node node
     Node.ip = ip
+
     val := getHash(ip)
-    if (len(ring)==0){
-        //TODO-Is this empty string?
+
+    if len(self.ring)==0{
         Node.succ = ""
         Node.prev = ""
         Node.start = 0
-        Node.end = 2^(32) -1 //TODO-better way to write this
+        Node.end = MAXHASHVAL
+        Node.ip=ip
     } else{
-    for i:=0;i<len(ring);i++{
-        if val > ring[i].start && val < ring[i].end{
-            Node.succ = ring[i].succ
-            Node.prev = ring[i].ip
-            Node.start = ring[i].end
+        if len(Self.ring)==1{
+//TODO
+        }else{
+            if len(self.ring)==2{
+                //TODO
+
+            }
+        }else{
+    for i:=0;i<len(self.ring);i++{
+        if val > self.ring[i].start && val < self.ring[i].end{
+            Node.succ = self.ring[i].succ
+            Node.prev = self.ring[i].ip
+            Node.start = self.ring[i].end
             Node.end = val
             //Fix the predecessor
-            ring[i].succ = Node.ip
+            self.ring[i].succ = Node.ip
             break
         }else {
-            fmt.Errorf("some error, the node must be inserted somewhere")
+            return fmt.Errorf("some error, the node must be inserted somewhere")
         }
     }
     //Fix the successor's arc and prev value
-    for j:=0;j<len(ring);j++{
-        if ring[j].ip==Node.succ{
-            ring[j].prev = Node.ip
-            ring[j].start = val //TODO-or os this val + 1?
+    for j:=0;j<len(self.ring);j++{
+        if self.ring[j].ip==Node.succ{
+            self.ring[j].prev = Node.ip
+            self.ring[j].start = val //TODO-or os this val + 1?
             break
         }
     }
 }
-    ring = append(ring, Node) //TODO-is this how you use append
+    self.ring = append(self.ring, Node) //TODO-is this how you use append
+
+    return nil
 }
 
 
-func removeNodefromRing(ip string, ring []node, next *string, prev *string){
-    //assert(len(ring)!=0)
+func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) error{
 
-    for i:=0;i<len(ring);i++{
-        if ip==ring[i].ip{
+    if len(self.ring)==0{
+        return fmt.Errorf("ring already empty, cannot remove node")
+    }
+
+    if len(self.ring)==1{
+        if self.ring[1].ip==ip{
+            //the only node in the ring is the node we want to delete
+            //create ring of size 0
+            self.ring = make ([]node, 0)
+            return nil
+        }else{
+            return fmt.Errorf("the only node in ring does not share ip with the node being removed. Error")
+        }
+    }
+
+    if len(self.ring)==2{
+        var j uint32
+        if self.ring[0].ip==ip{
+            //j is the index of the node remaining
+            j=1
+        }else{
+        if self.ring[1].ip==ip{
+            j=0
+        }else{
+            return fmt.Errorf("Ring has two nodes, but none of the nodes match the ip being deleted")
+        }}
+
+//Modify ring to contain only one node
+        self.ring = make([]node,1)
+        self.ring[0].succ = ""
+        self.ring[0].prev=""
+        self.ring[0].ip=self.ring[j].ip
+        self.ring[0].start=0
+        self.ring[0].end= MAXHASHVAL
+
+        //above should leave only one node in the ring
+        if len(self.ring)!=1{
+            return fmt.Errorf("ring is not of size 1. Error")
+        }
+        return nil
+    }
+
+    for i:=0;i<len(self.ring);i++{
+        if ip==self.ring[i].ip{
             //we have found our node, need to modify the relevant succ and prev values in ring
             //and remove the node
-
-            for j:=0;j<len(ring);j++{
+            for j:=0;j<len(self.ring);j++{
             //Fix the successor node
-                if ring[j].ip==ring[i].succ{
-                    ring[j].prev = ring [i].prev
+                if self.ring[j].ip==self.ring[i].succ{
+                    self.ring[j].prev = self.ring[i].prev
                 }
             //Fix the predecessor node
-                if ring[j].ip==ring[i].prev{
-                    ring[j].succ=ring[i].prev
+                if self.ring[j].ip==self.ring[i].prev{
+                    self.ring[j].succ=self.ring[i].succ
                 }
             }
             //Remove the node
-            ring = append(ring[:i],ring[i+1:]...)
-            //TODO-AM i USING append correctly
+            self.ring = append(self.ring[:i],self.ring[i+1:]...)
+            return nil
         }
     }
+    return nil
 }
 
 //keeps a count mod 3. Everytime it is 0, we call the Clock().
@@ -124,8 +185,9 @@ func (self *keeper) node_status() error{
 }
 
 func (self *keeper) run() error {
-
 	// initialize
+    var chord Chord
+
 	for i := range self.config.Backs {
 		self.workers = append(self.workers, worker{
 			address: self.config.Backs[i],
@@ -149,6 +211,7 @@ func (self *keeper) run() error {
     for i:= range self.config.Backs {
         cur_node_status := false
         err_node_status := self.workers[i].handler.Set(&keyvalue, &succ)
+        //If you are able to do above "Set" operation, then the node is up
 
         if err_node_status!=nil{
             if(succ==true){
@@ -170,7 +233,7 @@ func (self *keeper) run() error {
             if cur_node_status==true{
             //new node has joined
             //TODO-modify ring
-            addNodetoRing(self.config.Backs[i],ring,&next,&prev)
+            chord.addNodetoRing(self.config.Backs[i],&next,&prev)
 
             //TODO-add successor/previous keys on the corresponding nodes
             self.workers[i].handler.Set(&KeyValue{
@@ -183,7 +246,7 @@ func (self *keeper) run() error {
 
 
             //TODO-call replication
-            //ReplicaSetJoin(self.config.Backs[i])
+            chord.ReplicaSetJoin(self.config.Backs[i])
             }else{
                 //Nothing to do
             }
@@ -193,13 +256,13 @@ func (self *keeper) run() error {
             }else{
                 //Node has failed
                 //TODO-Modify ring, remove node
-                removeNodefromRing(self.config.Backs[i],ring,&next,&prev)
+                chord.removeNodefromRing(self.config.Backs[i],&next,&prev)
 
                 //TODO-Modify successor/previous keys
                 //MODIFY THE CORRECT NODES
 
                 //TODO-call replication
-                //ReplicaSetFail(self.config.Backs[i])
+                //go ReplicaSetFail(self.config.Backs[i])
             }
         }
     }

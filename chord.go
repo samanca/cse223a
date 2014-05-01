@@ -21,3 +21,5 @@ func (self *Chord) ReplicaSetFail(ip string) []string {
     //The failed node does not exist in the ring at all.
 	return nil
 }
+
+//TODO-additional functions asked my Saman
