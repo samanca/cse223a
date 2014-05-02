@@ -305,15 +305,15 @@ func (self *keeper) run() error {
             if cur_node_status==true{
             //new node has joined
             //Call replication service
-            replication.notifyJoin(self.config.Backs[i])
             //modify ring - add node
-            var err1 error
-            next,prev,err1 = chord.addNodetoRing(self.config.Backs[i])
-            if err1!=nil{
-                fmt.Errorf("error in adding node")
-            }
+			var err1 error
+			next,prev,err1 = chord.addNodetoRing(self.config.Backs[i])
+			if err1!=nil{
+				fmt.Errorf("error in adding node")
+			}
+			replication.notifyJoin(self.config.Backs[i])
 
-            //TODO-add successor/previous keys on the corresponding nodes
+				//TODO-add successor/previous keys on the corresponding nodes
             self.workers[i].handler.Set(&KeyValue{
                 Key: "NEXT",
                 Value: next},&succ2)
