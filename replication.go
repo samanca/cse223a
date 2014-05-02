@@ -33,6 +33,9 @@ func (self *ReplicationService) run() error {
 			log.Print("unable to get the list of active nodes: %s", err)
 			continue
 		}
+		for i := range live_back_ends {
+			log.Print("--%s", live_back_ends[i])
+		}
 
 		// 1.5 - don't replicate data to nodes in locked state (in progress replication)
 		// TODO remove primary nodes from back-ends list
@@ -70,6 +73,7 @@ func (self *ReplicationService) garbageCollector() {
 	// TODO
 }
 
+// TODO avoid copying keys with empty value to destination
 func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference string) {
 
 	var keys List
@@ -88,7 +92,7 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 	for i := range keys.L {
 
 		// filter
-		primary_copy, e := self.chord.getIPbyBinName(keys.L[i])
+		primary_copy, e := self.chord.getIPbyBinName(extractNS(keys.L[i]))
 		if e !=  nil {
 			log.Print("error mapping user to bin: %s", e)
 			continue
@@ -106,6 +110,7 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 	*c<-(!anyFailure)
 }
 
+// TODO avoid copying empty lists to destination
 func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference string) {
 
 	var lists, buffer List
@@ -123,7 +128,7 @@ func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference s
 	for i := range lists.L {
 
 		// filter
-		primary_copy, e := self.chord.getIPbyBinName(lists.L[i])
+		primary_copy, e := self.chord.getIPbyBinName(extractNS(lists.L[i]))
 		if e !=  nil {
 			log.Print("error mapping user to bin: %s", e)
 			continue
