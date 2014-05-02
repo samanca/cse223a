@@ -40,11 +40,15 @@ func (self BinStorageWrapper) bootStrapRing(){
     }
 }
 
-
+/**
 func (self BinStorageWrapper) query(){
 	var cli *client
 	for {
 		// Run every 15 seconds
 		time.Sleep(15 * time.Second)
-		for i:= range self.chord
-}
+		for i:= range self.chord.ring{
+			cli=&client{ addr: self.back_ends[i] }
+			c,err=cli.acquireConnection();
+
+		}
+}**/

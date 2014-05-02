@@ -135,7 +135,7 @@ func (self *Chord1) addNode(ip string){
 }
 
 
-func (self *Chord1) removeNode(ip string) (int,error){
+func (self *Chord1) removeNode(ip string) (error){
     var ip_used string
     val := getHash1(ip)
     deleted := false
@@ -160,15 +160,30 @@ func (self *Chord1) removeNode(ip string) (int,error){
             }
             }
 
-        self.ring = make([]node,1)
-        self.ring[0].ip=ip_used
-        new_val := getHash1(ip_used)
-        self.ring[0].end= new_val
-        deleted=true
-        }
+            self.ring = make([]node,1)
+            self.ring[0].ip=ip_used
+            new_val := getHash1(ip_used)
+            self.ring[0].end= new_val
+            deleted=true
+            }
     }else{
         for i:=0;i<len(self.ring);i++{
             if val==self.ring[i].hash{
+                /**
+                 for j:=0;j<len(self.ring);j++{
+            //Fix the successor node
+                if self.ring[j].hash==self.ring[i].end{
+//log.Print("remove23")
+                //    self.ring[j].prev = self.ring[i].prev
+                    self.ring[j].start = self.ring[i].start
+                }
+            //Fix the predecessor node
+//log.Print("remove24")
+                if self.ring[j].ip==self.ring[i].prev{
+//log.Print("remove25")
+                    self.ring[j].succ=self.ring[i].succ
+                }
+            }***/
                 self.ring = append(self.ring[:i],self.ring[i+1:]...)
                 deleted=true
                 index=i-1
@@ -179,7 +194,7 @@ func (self *Chord1) removeNode(ip string) (int,error){
     if(deleted==false)
         return fmt.Errorf("Error while deleting node in Chord")
     else
-        return index,nil
+        return nil
     
 }
 
