@@ -318,7 +318,6 @@ func (self *keeper) run() error {
 			}
 			replication.notifyJoin(self.config.Backs[i])
 
-<<<<<<< HEAD
             //add successor/previous keys on the corresponding nodes
             err2:=self.workers[i].handler.Set(&KeyValue{
                 Key: "NEXT",
