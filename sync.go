@@ -1,14 +1,19 @@
 package triblab
 import . "trib"
 import "encoding/json"
+
+func Sync(backend string, replicas []string, c *chan bool) {
+	e := _sync(backend, replicas)
+	*c<-(e == nil)
+}
+
 /*
  * TODO test basic operation (without any failures)
- * TODO test if the method returns on the event of failure
  * TODO handle keeper failures (log buffer at BackEnds)
- * TODO we need to have persistent connections to back-ends
  * TODO GC before return (close connections)
+ * TODO we might be able to apply cached opLog on Primary Failure
  */
-func run(backend string, replicas []string) error {
+func _sync(backend string, replicas []string) error {
 
 	// Backend RPC handler
 	be := &client{ addr: backend }
@@ -17,42 +22,41 @@ func run(backend string, replicas []string) error {
 		rs[i] = &client{ addr: replicas[i] }
 	}
 
-	for {
-		// 1 - Retrieve OpLog
-		var opLog List
-		e := be.ListGet(LOG_KEY, &opLog)
-		if e != nil { return e }
+	// 1 - Retrieve OpLog
+	var opLog List
+	e := be.ListGet(LOG_KEY, &opLog)
+	if e != nil { return e }
 
-		for i := range opLog.L {
+	for i := range opLog.L {
 
-			// 2 - Decode OpLog entry
-			var op OpLogEntry
-			e = json.Unmarshal([]byte(opLog.L[i]), &op)
-			if e != nil {
+		// 2 - Decode OpLog entry
+		var op OpLogEntry
+		e = json.Unmarshal([]byte(opLog.L[i]), &op)
+		if e == nil {
 
-				// 3 - Replicate
-				for r := range rs {
-					e = doWhatISay(rs[r], &op)
-					if e != nil { return e }
-				}
-
-				// 4 - Perform operation
-				e = doWhatISay(be, &op)
+			// 3 - Replicate
+			for r := range rs {
+				e = _doWhatISay(rs[r], &op)
 				if e != nil { return e }
 			}
 
-			// 5 - Remove log entry
-			var n int
-			e = be.ListRemove(&KeyValue{ Key: LOG_KEY, Value: opLog.L[i] }, &n)
+			// 4 - Perform operation
+			e = _doWhatISay(be, &op)
 			if e != nil { return e }
 		}
+
+		// 5 - Remove log entry
+		var n int
+		e = be.ListRemove(&KeyValue{ Key: LOG_KEY, Value: opLog.L[i] }, &n)
+		if e != nil { return e }
 	}
+	return nil
 }
 
 /*
  * TODO do we need to have &b and &n outside this method?
  */
-func doWhatISay(c *client, o *OpLogEntry) error {
+func _doWhatISay(c *client, o *OpLogEntry) error {
 
 	var b bool
 	var n int
