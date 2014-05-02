@@ -51,6 +51,43 @@ func (self *Chord) initialize() error{
     return nil
 }
 
+func (self *Chord) lookupValinRing(val uint32) (string, error){
+    if len(self.ring)==0{
+        return "",fmt.Errorf("ring is of size 0 nodes. Cannot find a node.")
+    }
+    if len(self.ring)==1{
+        return self.ring[0].ip,nil
+    }
+    if len(self.ring)>1{
+        for j:=0;j<len(self.ring);j++{
+            if (self.ring[j].start < val) && (self.ring[j].end > val){
+                return self.ring[j].ip, nil
+            }
+            //else check for the "0" key jump case i.e. the val is between end and start
+            if (self.ring[j].start > self.ring[j].end){
+                if(self.ring[j].end > val && val > 0) || (self.ring[j].start < val){
+                    return self.ring[j].ip, nil
+                }
+            }
+        }
+    }
+    return "", fmt.Errorf("should never reach here. Check function")
+}
+
+func (self *Chord) getIPbyBinName(name string) (string,error){
+    val := getHash(name)
+    return self.lookupValinRing(val)
+}
+
+func (self *Chord) listAllActiveNodes() ([]string, error){
+    list_of_active_nodes:=make([]string,0)
+
+    for i:=0;i<len(self.ring);i++{
+        list_of_active_nodes = append(list_of_active_nodes,self.ring[i].ip)
+    }
+    return list_of_active_nodes,nil
+}
+
 func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
     var Node node
     val := getHash(ip)
