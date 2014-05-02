@@ -72,15 +72,15 @@ func (self *Chord) lookupValinRing(val uint32) (string, error){
 log.Print(val,  self.ring[j].start,  self.ring[j].end)
           if self.ring[j].start < self.ring[j].end {
        //       log.Print("12")
-            if self.ring[j].start < val && self.ring[j].end > val{
+            if self.ring[j].start <= val && val <= self.ring[j].end{
          //       log.Print("23")
                 return self.ring[j].ip, nil
             }
         }
-            //else check for the "0" key jump case i.e. the val is between end and start
+            //else check for the "0" key jumpingmp case i.e. the val is between end and start
             if (self.ring[j].start > self.ring[j].end){
    //             log.Print("11")
-                if((self.ring[j].end > val && val > 0) || (self.ring[j].start < val)){
+                if((self.ring[j].end >= val && val >= 0) || (self.ring[j].start <= val)){
      //               log.Print("22")
                     return self.ring[j].ip, nil
                 }
@@ -159,7 +159,7 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
         //Normal case - when a node's start value is less than end
       if self.ring[i].start < self.ring[i].end{
 //log.Print("add8")
-        if (val > self.ring[i].start && val < self.ring[i].end){
+        if (val >= self.ring[i].start && val <= self.ring[i].end){
 //log.Print("add9")
             Node.succ = self.ring[i].ip
             Node.prev = self.ring[i].prev
@@ -176,7 +176,7 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
           //Special case - jumping over the zero key
         if self.ring[i].start > self.ring[i].end{
 //log.Print("add11")
-            if (val < self.ring[i].end && val > 0) ||  val > self.ring[i].start{
+            if (val <= self.ring[i].end && val >= 0) ||  val >= self.ring[i].start{
 //log.Print("add12")
                 Node.succ=self.ring[i].ip
                 Node.prev=self.ring[i].prev
@@ -523,7 +523,7 @@ var node_status []bool = make ([]bool,300)
     }
     //Perform the following clock sync only every 3rd second
      if count==2{
-log.Print(20)
+//log.Print(20)
 		// Query workers
 		var maxClock uint64
 		for i := range self.workers {
