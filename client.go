@@ -30,6 +30,15 @@ func removeNS(entry string) string {
 	}
 }
 
+func extractNS(entry string) string {
+	t := strings.Split(entry, "::")
+	if len(t) == 2 {
+		return t[0]
+	} else {
+		return t[0] // EMPTY_STRING?!
+	}
+}
+
 /*
  * Implementing KeyString
  */
