@@ -13,7 +13,7 @@ const (
 	DEAD = 3
 )
 
-const MAXHASHVAL = 2^(32) - 1
+const MAXHASHVAL = 4294967296 - 1
 //TODO-isthis correct MAXHASHVAL?
 
 type worker struct {
@@ -35,9 +35,9 @@ type keeper struct {
 
 //Maintain Node and Ring for the Chord Ring information
 type node struct {
-    succ string //succ ip
-    prev string //prev ip
     ip string //its own ip
+    prev string //prev ip
+    succ string //succ ip
     start uint32 //start of its arc
     end uint32 //end of its arc onr ring
 }
@@ -112,26 +112,23 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
         Node.prev = ""
         Node.start = 0
         Node.end = MAXHASHVAL
-    } else{
+    } //else{
         if len(self.ring)==1{
             Node.succ=self.ring[0].ip
             Node.prev=self.ring[0].ip
-            Node.start=getHash(self.ring[0].ip)
+            Node.start=getHash(self.ring[0].ip)+1
             Node.end=val
 
             //Fix the other node - which is already existing
             self.ring[0].succ=ip
             self.ring[0].prev=ip
-            self.ring[0].start=val
+            self.ring[0].start=val+1
             self.ring[0].end=getHash(self.ring[0].ip)
-
             //So, now both the nodes are fixed. The initial node covers the "0" key
-        }/*else{
-            if len(self.ring)==2{
-            }
-        }*/
+        }//else{
         //TODO-above. I think len=2 case is handled in loop. Confirm.
-
+        //For rings with 2 nodes or more
+        if len(self.ring)>1{
     for i:=0;i<len(self.ring);i++{
         //Normal case - when a node's start value is less than end
       if self.ring[i].start < self.ring[i].end{
@@ -240,14 +237,7 @@ func (self *Chord) removeNodefromRing(ip string) (string, string, error){
     return "","",nil
 }
 
-//keeps a count mod 3. Everytime it is 0, we call the Clock().
-//When it is 0,1, or 2, we do the node join/crash check
-var count int = -1
-
-//Table maintained by Keeper for all the nodes
-//TODO-300 is static. Can we maintain this table dynamic while sharing it between keepers
-var node_status []bool = make ([]bool,300)
-
+/*
 //TODO-only works for one keeper. The range needs to be modified when working with multiple keepers
 func (self *keeper) node_status() error{
     for i:= range self.config.Backs {
@@ -255,14 +245,23 @@ func (self *keeper) node_status() error{
     }
     return nil
 }
+*/
 
 func (self *keeper) run() error {
+    //keeps a count mod 3. Everytime it is 0, we call the Clock().
+    //When it is 0,1, or 2, we do the node join/crash check
+    var count int = -1
+//Table maintained by Keeper for all the nodes
+//TODO-300 is static. Can we maintain this table dynamic while sharing it between keepers
+var node_status []bool = make ([]bool,300)
+
 	// initialize
     var chord Chord
     chord.initialize()
-    chord.printRing()
-	replication := &ReplicationService{ _chord: &chord }
+log.Print(chord.ring)
+    replication := &ReplicationService{ _chord: &chord }
 
+log.Print(self.config.Backs)
 	for i := range self.config.Backs {
 		self.workers = append(self.workers, worker{
 			address: self.config.Backs[i],
@@ -273,7 +272,7 @@ func (self *keeper) run() error {
 	}
 
 	go replication.run()
-
+log.Print(1)
 	for {
 		// Heartbeat period
 		time.Sleep(1 * time.Second)
@@ -285,11 +284,12 @@ func (self *keeper) run() error {
         keyvalue := KeyValue{Key:key,Value:value}
         succ:= false
 
+log.Print(2)
     for i:= range self.config.Backs {
         cur_node_status := false
         err_node_status := self.workers[i].handler.Set(&keyvalue, &succ)
         //If you are able to do above "Set" operation, then the node is up
-
+log.Print(3)
         if err_node_status!=nil{
             if(succ==true){
                 //the operation had succeeded, the node is up
@@ -303,6 +303,7 @@ func (self *keeper) run() error {
             cur_node_status=true
         }
 
+log.Print(4)
         var succ2,succ3 bool
         var next,prev string
 
@@ -312,7 +313,12 @@ func (self *keeper) run() error {
             //Call replication service
             //modify ring - add node
 			var err1 error
+log.Print(5)
+log.Print("len of chord.ring=", len(chord.ring))
+log.Print(chord.ring)
 			next,prev,err1 = chord.addNodetoRing(self.config.Backs[i])
+log.Print(6)
+log.Print(chord.ring)
 			if err1!=nil{
 				fmt.Errorf("error in adding node")
 			}
@@ -320,8 +326,9 @@ func (self *keeper) run() error {
             if err1!=nil{
                 fmt.Errorf("chordminisnapshot network error. check.")
             }
+log.Print(7)
 			go replication.notifyJoin(&chordminisnapshot)
-
+log.Print(8)
             //add successor/previous keys on the corresponding nodes
             err2:=self.workers[i].handler.Set(&KeyValue{
                 Key: "NEXT",
@@ -329,13 +336,14 @@ func (self *keeper) run() error {
                 if err2!=nil || succ2 !=true{
                     fmt.Errorf("Error with Set NEXT")
                 }
+log.Print(9)
             err3:=self.workers[i].handler.Set(&KeyValue{
                 Key: "PREV",
                 Value: prev}, &succ3)
                 if err3!=nil || succ3!=true{
                     fmt.Errorf("Error with Set PREV")
                 }
-
+log.Print(10)
                 //TODO-also modify these values on the other nodes
                 var succ4,succ5 bool
                 for j:=0;j<len(self.workers);j++{
@@ -345,33 +353,38 @@ func (self *keeper) run() error {
                             return fmt.Errorf("Error: with set NEXT in prev")
                         }
                     }
-
+log.Print(11)
                     if self.config.Backs[j]==next{
                         err5:=self.workers[j].handler.Set(&KeyValue{Key:"PREV",Value:self.config.Backs[i]},&succ5)
                         if err5!=nil || succ5!=true{
                             return fmt.Errorf("Error: with set PREV in next")
                         }
                     }
+log.Print(12)
                 }
-
+           node_status[i]=true
             }else{
                 //Nothing to do
+log.Print(13)
             }
         }else {
             if cur_node_status==true{
                 //Nothing to do
+log.Print(14)
             }else{
                 //Node has failed
                 //Call replication service
+log.Print(15)
             chordminisnapshot1,errr:=CreateMiniChord(self.config.Backs[i],&chord)
             if errr!=nil{
                 fmt.Errorf("chordminisnapshot network error. check.")
             }
 			go replication.notifyLeave(&chordminisnapshot1)
-
+log.Print(16)
             //Remove node - modify ring
                 var err2 error
                 next,prev,err2 = chord.removeNodefromRing(self.config.Backs[i])
+log.Print(17)
                 if err2!=nil{
                     fmt.Errorf("Error removing node.")
                 }
@@ -392,11 +405,12 @@ func (self *keeper) run() error {
                         }
                     }
                 }
-
+            node_status[i]=false
         }
     }
     //Perform the following clock sync only every 3rd second
      if count==2{
+log.Print(20)
 		// Query workers
 		var maxClock uint64
 		for i := range self.workers {
@@ -444,7 +458,7 @@ func (self *keeper) run() error {
 		}
      }
 	}
-	return errors.New("Keeper terminated unexpectedly!");
 }
+	return errors.New("Keeper terminated unexpectedly!");
 }
 
