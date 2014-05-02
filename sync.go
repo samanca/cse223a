@@ -1,9 +1,10 @@
 package triblab
 import . "trib"
 import "encoding/json"
+import "log"
 
-func Sync(backend string, replicas []string, c *chan bool) {
-	e := _sync(backend, replicas)
+func Sync(backend string, replicas []string, chord *Chord, c *chan bool) {
+	e := _sync(backend, replicas, chord)
 	*c<-(e == nil)
 }
 
@@ -13,7 +14,7 @@ func Sync(backend string, replicas []string, c *chan bool) {
  * TODO GC before return (close connections)
  * TODO we might be able to apply cached opLog on Primary Failure
  */
-func _sync(backend string, replicas []string) error {
+func _sync(backend string, replicas []string, chord *Chord) error {
 
 	// Backend RPC handler
 	be := &client{ addr: backend }
@@ -34,15 +35,32 @@ func _sync(backend string, replicas []string) error {
 		e = json.Unmarshal([]byte(opLog.L[i]), &op)
 		if e == nil {
 
-			// 3 - Replicate
-			for r := range rs {
-				e = _doWhatISay(rs[r], &op)
-				if e != nil { return e }
+			// 2.5 - is it mine?
+			owner, err := chord.getIPbyBinName(removeNS(op.data.Key))
+
+			if err != nil {
+				log.Print("error getting bin name: %s", err)
 			}
 
-			// 4 - Perform operation
-			e = _doWhatISay(be, &op)
-			if e != nil { return e }
+			if owner == backend {
+
+				// 3 - Replicate
+				for r := range rs {
+					e = _doWhatISay(rs[r], &op)
+					if e != nil { return e }
+				}
+
+				// 4 - Perform operation
+				e = _doWhatISay(be, &op)
+				if e != nil { return e }
+			} else {
+
+				// 2.75 - Move it to the right place
+				var b bool
+				t := &client{ addr: owner }
+				e = t.ListAppend(&KeyValue{ Key: LOG_KEY, Value: opLog.L[i]}, &b)
+				// TODO optimizing this by maintaining a connection to previous node
+			}
 		}
 
 		// 5 - Remove log entry

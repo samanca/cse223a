@@ -50,7 +50,7 @@ func (self *ReplicationService) run() error {
 			replicas[1], e = self._chord.Succ_node_ip(replicas[0])
 			if e != nil { c<-false; continue }
 
-			go Sync(live_back_ends[i], replicas, &c)
+			go Sync(live_back_ends[i], replicas, self._chord, &c)
 		}
 
 		// 4 - wait for join
