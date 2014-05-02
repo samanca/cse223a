@@ -4,7 +4,10 @@ import . "trib"
 
 // Creates an RPC client that connects to addr.
 func NewClient(addr string) Storage {
-	return &client{ addr: addr }
+	//return &client{ addr: addr }
+	cli := &OpLogClient{ addr: addr }
+	cli.init()
+	return cli
 }
 
 // Serve as a backend based on the given configuration

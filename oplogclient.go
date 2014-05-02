@@ -23,11 +23,15 @@ func (self *OpLogClient) makeNS(key string) string {
 	}
 }
 
+func (self *OpLogClient) init() {
+	self.cli = &client{ addr: self.addr, ns: self.ns }
+}
+
 /*
  * Implementing KeyString
  */
 
- func (self *OpLogClient) Get(key string, value *string) error {
+func (self *OpLogClient) Get(key string, value *string) error {
 	return self.cli.Get(key,value);
 }
 
