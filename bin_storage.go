@@ -1,9 +1,11 @@
 package triblab
 import . "trib"
 import "hash/crc32"
+import "time"
 
 type BinStorageWrapper struct {
 	back_ends[] string
+	chord  Chord1
 }
 
 func getHash(name string) uint32 {
@@ -23,4 +25,26 @@ func (self BinStorageWrapper) Bin(name string) Storage {
 	cli := &OpLogClient{ addr: server, ns: name }
 	cli.init()
 	return cli
+}
+
+
+func (self BinStorageWrapper) bootStrapRing(){
+	 var cli *client
+	 var name string
+    for i:=0;i<len(self.back_ends);i++{
+    	cli=&client{ addr: self.back_ends[i] }
+    	c, err := cli.acquireConnection();
+    	if err==nil{
+    		self.chord.addNode(self.back_ends[i])
+    	}
+    }
+}
+
+
+func (self BinStorageWrapper) query(){
+	var cli *client
+	for {
+		// Run every 15 seconds
+		time.Sleep(15 * time.Second)
+		for i:= range self.chord
 }
