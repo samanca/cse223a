@@ -76,10 +76,54 @@ func (self *ReplicationService) replicateThrough(c *chan bool, source, dest, x s
 	*c<-true
 }
 
-func (self *ReplicationService) notifyJoin(node string) {
+// TODO@Vineet Should be invoked after reflecting the change in Chord
+func (self *ReplicationService) notifyJoin(node string) error {
 	// TODO
+	var err error
+	var prev_prev, prev, next string
+
+	// query Chord
+	prev, err = self.chord.Prev_node_ip(node)
+	if err != nil { return err }
+	prev_prev, err = self.chord.Prev_node_ip(prev)
+	if err != nil { return err }
+
+	next, err = self.chord.Succ_node_ip(node)
+	if err != nil { return err }
+
+	if prev == EMPTY_STRING {
+		return nil // nothing to do as |Chord| < 2
+	}
+
+	// init channel
+	c := make(chan bool)
+
+	go self.replicateThrough(&c, node, node, next)
+	go self.replicate(&c, prev, node)
+	if prev_prev != prev {
+		go self.replicate(&c, prev_prev, node)
+	} else {
+		c<-true
+	}
+
+	// wait for join
+	var succ int = 0
+	for i := 0; i < 3; i++ {
+		if (<-c) { succ++ }
+	}
+
+	// report garbage
+	// TODO
+
+	if succ == 3 {
+		return nil
+	} else {
+		return fmt.Errorf("%d replication(s) failed!", (3 - succ))
+	}
 }
 
+// TODO refactor (too much duplicated code)
+// TODO@Vineet Should be invoked before reflecting node failure in Chord
 func (self *ReplicationService) notifyLeave(node string) error {
 
 	var err error
@@ -96,7 +140,7 @@ func (self *ReplicationService) notifyLeave(node string) error {
 	next_next, err = self.chord.Succ_node_ip(next)
 	if err != nil { return err }
 
-	if prev == node || prev == next || prev_prev == next {
+	if prev == EMPTY_STRING || prev == next || prev_prev == next {
 		return nil // nothing to do as |Chord| < 4
 	}
 
@@ -113,6 +157,9 @@ func (self *ReplicationService) notifyLeave(node string) error {
 	for i := 0; i < 3; i++ {
 		if (<-c) { succ++ }
 	}
+
+	// report garbage
+	// TODO
 
 	if succ == 3 {
 		return nil
