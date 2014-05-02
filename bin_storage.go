@@ -1,7 +1,7 @@
 package triblab
 import . "trib"
 import "hash/crc32"
-import "time"
+//import "time"
 
 type BinStorageWrapper struct {
 	back_ends[] string
@@ -30,10 +30,10 @@ func (self BinStorageWrapper) Bin(name string) Storage {
 
 func (self BinStorageWrapper) bootStrapRing(){
 	 var cli *client
-	 var name string
+	 //var name string
     for i:=0;i<len(self.back_ends);i++{
     	cli=&client{ addr: self.back_ends[i] }
-    	c, err := cli.acquireConnection();
+    	_, err := cli.acquireConnection();
     	if err==nil{
     		self.chord.addNode(self.back_ends[i])
     	}
