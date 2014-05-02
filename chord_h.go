@@ -1,7 +1,7 @@
 package triblab
 //import "trib"
 import "hash/crc32"
-import "log"
+//import "log"
 import "fmt"
 //Maintain node1 and Ring for the Chord1 Ring information
 type node1 struct {
@@ -32,11 +32,11 @@ func (self *Chord1) locate_node(id uint32) uint32{
     var id_min int
     var max uint32
     var min uint32
-    var r uint32
+//    var r uint32
     found:=false
     max=self.ring[0].hash//
     min=self.ring[0].hash
-    r=0
+  //  r=0
     if (len(self.ring)==1){
             if(self.ring[0].hash>id){
                 succ=self.ring[0].hash
@@ -79,23 +79,24 @@ return succ
 
 func (self *Chord1) find_succ(id uint32) uint32{
     var succ uint32
-    var id_max int
+ //   var id_max int
+ //   id_max:=1
     var id_min int
     var max uint32
     var min uint32
-    var r uint32
+ //   var r uint32
     found:=false
     max=self.ring[0].hash
     min=self.ring[0].hash
 
-    if len(self.ring)==1
+    if len(self.ring)==1{
         return self.ring[0].hash
-
+    }
     if len(self.ring)>1{
         for i:=0;i<len(self.ring);i++{
 
              if (self.ring[i].hash > max){
-                id_max=i
+               // id_max=i
                 max=self.ring[i].hash
             }
 
@@ -134,7 +135,7 @@ func (self *Chord1) addNode(ip string){
     }
 }
 
-
+/***
 func (self *Chord1) removeNode(ip string) (error){
     var ip_used string
     val := getHash1(ip)
@@ -183,7 +184,7 @@ func (self *Chord1) removeNode(ip string) (error){
 //log.Print("remove25")
                     self.ring[j].succ=self.ring[i].succ
                 }
-            }***/
+            }
                 self.ring = append(self.ring[:i],self.ring[i+1:]...)
                 deleted=true
                 index=i-1
@@ -196,7 +197,7 @@ func (self *Chord1) removeNode(ip string) (error){
     else
         return nil
     
-}
+}***/
 
 
 
