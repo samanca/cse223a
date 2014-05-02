@@ -261,7 +261,7 @@ func (self *keeper) run() error {
     var chord Chord
     chord.initialize()
     chord.printRing()
-	replication := &ReplicationService{ chord: &chord }
+	replication := &ReplicationService{ _chord: &chord }
 
 	for i := range self.config.Backs {
 		self.workers = append(self.workers, worker{
