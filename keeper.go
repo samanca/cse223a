@@ -164,11 +164,11 @@ func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
         }
     }
 }
-    //TODO-call Saman function before appending node
+    //TODO-call Saman function before appending node. But is this the right place?
+    //replication.notifyJoin(Node.ip)
     self.ring = append(self.ring, Node) //TODO-is this how you use append
     return nil
 }
-
 
 func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) error{
     if len(self.ring)==0{
@@ -228,6 +228,7 @@ func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) err
             }
             //Remove the node
             //TODO - call Saman function before deleting node
+            //replication.notifyLeave(ip)
             self.ring = append(self.ring[:i],self.ring[i+1:]...)
             return nil
         }
@@ -303,6 +304,7 @@ func (self *keeper) run() error {
             if cur_node_status==true{
             //new node has joined
             //TODO-modify ring
+            replication.notifyJoin(self.config.Backs[i])
             chord.addNodetoRing(self.config.Backs[i],&next,&prev)
 
             //TODO-add successor/previous keys on the corresponding nodes
@@ -316,7 +318,7 @@ func (self *keeper) run() error {
 
 
             //TODO-call replication
-            chord.ReplicaSetJoin(self.config.Backs[i])
+            //chord.ReplicaSetJoin(self.config.Backs[i])
             }else{
                 //Nothing to do
             }
@@ -326,6 +328,7 @@ func (self *keeper) run() error {
             }else{
                 //Node has failed
                 //TODO-Modify ring, remove node
+                replication.notifyLeave(self.config.Backs[i])
                 chord.removeNodefromRing(self.config.Backs[i],&next,&prev)
 
                 //TODO-Modify successor/previous keys
