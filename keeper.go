@@ -316,7 +316,11 @@ func (self *keeper) run() error {
 			if err1!=nil{
 				fmt.Errorf("error in adding node")
 			}
-			replication.notifyJoin(self.config.Backs[i])
+            chordminisnapshot,err1:=CreateMiniChord(self.config.Backs[i],&chord)
+            if err1!=nil{
+                fmt.Errorf("chordminisnapshot network error. check.")
+            }
+			go replication.notifyJoin(&chordminisnapshot)
 
             //add successor/previous keys on the corresponding nodes
             err2:=self.workers[i].handler.Set(&KeyValue{
@@ -359,8 +363,13 @@ func (self *keeper) run() error {
             }else{
                 //Node has failed
                 //Call replication service
-                replication.notifyLeave(self.config.Backs[i])
-                //Remove node - modify ring
+            chordminisnapshot1,errr:=CreateMiniChord(self.config.Backs[i],&chord)
+            if errr!=nil{
+                fmt.Errorf("chordminisnapshot network error. check.")
+            }
+			go replication.notifyLeave(&chordminisnapshot1)
+
+            //Remove node - modify ring
                 var err2 error
                 next,prev,err2 = chord.removeNodefromRing(self.config.Backs[i])
                 if err2!=nil{
