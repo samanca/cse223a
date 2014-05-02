@@ -25,30 +25,75 @@ func getHash1(name string) uint32 {
 func (self *Chord1)locate_node(id uint32) uint32{
     var succ uint32
     var id_max int
+    var id_min int
     var max uint32
+    var min uint32
+    var r uint32
     var found bool
     found=false
-    max=0
-
+    max=ring[0].hash
+    min=ring[0].hash
+    r=0
     fmt.Printf("Ring size is %d\n",len(ring))
+
+    if (len(ring)==1){
+            if(ring[0].hash>id){
+                succ=ring[0].hash
+                ring[0].end=id
+            }else{
+                succ= ring[0].end
+                ring[0].end=id
+            }
+    }
+    if (len(ring)>=2){
     for i:=0;i<len(ring);i++{
         if(max < ring[i].hash){
             max=ring[i].hash
             id_max=i
         }
-            
+
+        if(min > ring[i].hash){
+            min=ring[i].hash
+            id_min=i
+        }
+
+            if (id > ring[i].hash && id < ring[i].end && found==false){
+                succ=ring[i].end
+                ring[i].end=id
+                found=true
+            }
+          
+        }
+          if (id >max || id <min){
+                succ=ring[id_min].hash
+                ring[id_max].end=id
+            }
+        }
+    
+
+  /*          
         if (id > ring[i].hash && id < ring[i].end && found==false) || (ring[i].hash==ring[i].end && found==false){
             succ= ring[i].end
             ring[i].end=id
             found=true
+            r=1
         }
     }  
-        if (id > ring[id_max].hash && len(ring)>2) {
+        if (found=false && len(ring)>2) {
             ring[id_max].end=id
-            succ=ring[0].hash
+            succ=ring[id_min].hash
             //succ=max
+            r=2
         }
-                 
+
+        if (id < ring[id_min].hash && len(ring)>2) {
+             ring[id_max].end=id
+             succ=ring[id_min].hash
+             r=3
+        }
+    */     
+        fmt.Printf("Max :%d,Min :%d,R:%d\n",max,min,r)
+              
 return succ
 }
 
