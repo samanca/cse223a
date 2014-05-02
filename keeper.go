@@ -60,12 +60,15 @@ func (self *Chord) lookupValinRing(val uint32) (string, error){
     }
     if len(self.ring)>1{
         for j:=0;j<len(self.ring);j++{
+            //Normal case, whent he start value is less than the end value
+          if self.ring[j].start < self.ring[j].end {
             if (self.ring[j].start < val) && (self.ring[j].end > val){
                 return self.ring[j].ip, nil
             }
+        }
             //else check for the "0" key jump case i.e. the val is between end and start
             if (self.ring[j].start > self.ring[j].end){
-                if(self.ring[j].end > val && val > 0) || (self.ring[j].start < val){
+                if((self.ring[j].end > val && val > 0) || (self.ring[j].start < val)){
                     return self.ring[j].ip, nil
                 }
             }
@@ -114,53 +117,63 @@ func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
             self.ring[0].end=getHash(self.ring[0].ip)
 
             //So, now both the nodes are fixed. The initial node covers the "0" key
-        }else{
+        }/*else{
             if len(self.ring)==2{
                 //TODO
             }
-        }
-        //TODO-one more else condition
+        }*/
+        //TODO-above. I think len=2 case is handled in loop. Confirm.
+
     for i:=0;i<len(self.ring);i++{
-      if self.ring[i].start<self.ring[i].end{
-        if val > self.ring[i].start && val < self.ring[i].end{
-            Node.succ = self.ring[i].succ
-            Node.prev = self.ring[i].ip
-            Node.start = self.ring[i].end
+        //Normal case - when a node's start value is less than end
+      if self.ring[i].start < self.ring[i].end{
+        if (val > self.ring[i].start && val < self.ring[i].end){
+            Node.succ = self.ring[i].ip
+            Node.prev = self.ring[i].prev
+            Node.start = self.ring[i].start
             Node.end = val
-            //Fix the predecessor
-            self.ring[i].succ = Node.ip
+            //Fix the successor node
+            self.ring[i].prev = Node.ip
+            self.ring[i].start = val+1
+            //Fix the predecessor node later - TODO
             break
         }
       }else{
-        if self.ring[i].start<self.ring[i].end{
-            if ((val > self.ring[i].start && val < self.ring[i].end) || (val >= 0 && val <self.ring[i].end)){//TODO
-            return nil
+          //Special case - jumping over the zero key
+        if self.ring[i].start > self.ring[i].end{
+            if (val < self.ring[i].start && val > 0) ||  val > self.ring[i].end{
+                Node.succ=self.ring[i].ip
+                Node.prev=self.ring[i].prev
+                Node.start=self.ring[i].start
+                Node.end=val
+                //Fixing the successor
+                self.ring[i].prev=Node.ip
+                self.ring[i].start=val+1
+                //Fix the predecessor node later - TODO
+                break
         }
     }
             return fmt.Errorf("some error, the node must be inserted somewhere")
     }
     }
-    //Fix the successor's arc and prev value
+    //Fix the predecessor's arc and prev value
     for j:=0;j<len(self.ring);j++{
-        if self.ring[j].ip==Node.succ{
-            self.ring[j].prev = Node.ip
-            self.ring[j].start = val //TODO-or os this val + 1?
+        if self.ring[j].ip==Node.prev{
+            self.ring[j].succ = Node.ip
             break
         }
     }
 }
+    //TODO-call Saman function before appending node
     self.ring = append(self.ring, Node) //TODO-is this how you use append
-
     return nil
 }
 
 
 func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) error{
-
     if len(self.ring)==0{
         return fmt.Errorf("ring already empty, cannot remove node")
     }
-
     if len(self.ring)==1{
         if self.ring[1].ip==ip{
             //the only node in the ring is the node we want to delete
@@ -171,7 +184,6 @@ func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) err
             return fmt.Errorf("the only node in ring does not share ip with the node being removed. Error")
         }
     }
-
     if len(self.ring)==2{
         var j uint32
         if self.ring[0].ip==ip{
@@ -186,7 +198,7 @@ func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) err
 
 //Modify ring to contain only one node
         self.ring = make([]node,1)
-        self.ring[0].succ = ""
+        self.ring[0].succ=""
         self.ring[0].prev=""
         self.ring[0].ip=self.ring[j].ip
         self.ring[0].start=0
@@ -207,6 +219,7 @@ func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) err
             //Fix the successor node
                 if self.ring[j].ip==self.ring[i].succ{
                     self.ring[j].prev = self.ring[i].prev
+                    self.ring[j].start = self.ring[i].start
                 }
             //Fix the predecessor node
                 if self.ring[j].ip==self.ring[i].prev{
@@ -214,6 +227,7 @@ func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) err
                 }
             }
             //Remove the node
+            //TODO - call Saman function before deleting node
             self.ring = append(self.ring[:i],self.ring[i+1:]...)
             return nil
         }
