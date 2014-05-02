@@ -240,6 +240,7 @@ func (self *keeper) node_status() error{
 func (self *keeper) run() error {
 	// initialize
     var chord Chord
+	replication := &ReplicationService{ chord: &chord }
 
 	for i := range self.config.Backs {
 		self.workers = append(self.workers, worker{
@@ -249,6 +250,8 @@ func (self *keeper) run() error {
 			handler: &client{ addr: self.config.Backs[i] },
 		})
 	}
+
+	go replication.run()
 
 	for {
 		// Heartbeat period
