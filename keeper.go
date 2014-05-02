@@ -106,33 +106,42 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
 
     //Folowing values are fixed regardless of node location in ring
     Node.ip = ip
-
+//log.Print("add1")
     if len(self.ring)==0{
+//log.Print("add2")
         Node.succ = ""
         Node.prev = ""
         Node.start = 0
         Node.end = MAXHASHVAL
     } //else{
         if len(self.ring)==1{
+//log.Print("add3")
             Node.succ=self.ring[0].ip
             Node.prev=self.ring[0].ip
             Node.start=getHash(self.ring[0].ip)+1
             Node.end=val
+//log.Print("add4")
 
             //Fix the other node - which is already existing
             self.ring[0].succ=ip
             self.ring[0].prev=ip
             self.ring[0].start=val+1
             self.ring[0].end=getHash(self.ring[0].ip)
+//log.Print("add5")
             //So, now both the nodes are fixed. The initial node covers the "0" key
         }//else{
         //TODO-above. I think len=2 case is handled in loop. Confirm.
         //For rings with 2 nodes or more
         if len(self.ring)>1{
+
+//log.Print("add6 - ")
     for i:=0;i<len(self.ring);i++{
+//log.Print("add7 - ", val, self.ring[i].start, self.ring[i].end)
         //Normal case - when a node's start value is less than end
       if self.ring[i].start < self.ring[i].end{
+//log.Print("add8")
         if (val > self.ring[i].start && val < self.ring[i].end){
+//log.Print("add9")
             Node.succ = self.ring[i].ip
             Node.prev = self.ring[i].prev
             Node.start = self.ring[i].start
@@ -144,9 +153,12 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
             break
         }
       }else{
+//log.Print("add10")
           //Special case - jumping over the zero key
         if self.ring[i].start > self.ring[i].end{
-            if (val < self.ring[i].start && val > 0) ||  val > self.ring[i].end{
+//log.Print("add11")
+            if (val < self.ring[i].end && val > 0) ||  val > self.ring[i].start{
+//log.Print("add12")
                 Node.succ=self.ring[i].ip
                 Node.prev=self.ring[i].prev
                 Node.start=self.ring[i].start
@@ -158,79 +170,111 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
                 break
         }
     }
-            return "","",fmt.Errorf("some error, the node must be inserted somewhere")
+//log.Print("add13")
+            //return "","",fmt.Errorf("some error, the node must be inserted somewhere")
     }
     }
+//log.Print("add14")
     //Fix the predecessor's arc and prev value
     for j:=0;j<len(self.ring);j++{
+//log.Print("add15")
         if self.ring[j].ip==Node.prev{
+//log.Print("add16")
             self.ring[j].succ = Node.ip
             break
         }
     }
 }
+//log.Print("add17")
     self.ring = append(self.ring, Node) //TODO-is this how you use append
+//log.Print("add18")
     return  Node.succ,Node.prev,nil
 }
 
 func (self *Chord) removeNodefromRing(ip string) (string, string, error){
+//log.Print("remove1")
     if len(self.ring)==0{
+//log.Print("remove2")
         return "","",fmt.Errorf("ring already empty, cannot remove node")
     }
+//log.Print("remove3")
     if len(self.ring)==1{
-        if self.ring[1].ip==ip{
+//log.Print("remove4")
+        if self.ring[0].ip==ip{
+//log.Print("remove5")
             //the only node in the ring is the node we want to delete
             //create ring of size 0
             self.ring = make ([]node, 0)
+//log.Print("remove6")
             return "","",nil
         }else{
+//log.Print("remove7")
             return "","",fmt.Errorf("the only node in ring does not share ip with the node being removed. Error")
         }
     }
+    var ip_used string
+
     if len(self.ring)==2{
-        var j uint32
+//log.Print("remove8")
         if self.ring[0].ip==ip{
-            //j is the index of the node remaining
-            j=1
+            ip_used=self.ring[1].ip
+//log.Print("remove9")
         }else{
         if self.ring[1].ip==ip{
-            j=0
+            ip_used=self.ring[1].ip
+//log.Print("remove10")
         }else{
+//log.Print("remove11")
             return "","",fmt.Errorf("Ring has two nodes, but none of the nodes match the ip being deleted")
         }}
 
+//log.Print("remove12 - ",)
 //Modify ring to contain only one node
         self.ring = make([]node,1)
+//log.Print("remove121")
         self.ring[0].succ=""
         self.ring[0].prev=""
-        self.ring[0].ip=self.ring[j].ip
+//log.Print("remove122")
+        self.ring[0].ip=ip_used
+//log.Print("remove122")
         self.ring[0].start=0
         self.ring[0].end= MAXHASHVAL
 
+//log.Print("remove13")
         //above should leave only one node in the ring
         if len(self.ring)!=1{
+//log.Print("remove14")
             return "","",fmt.Errorf("ring is not of size 1. Error")
         }
+//log.Print("remove15")
         return "","",nil
     }
 
     for i:=0;i<len(self.ring);i++{
+//log.Print("remove20")
         if ip==self.ring[i].ip{
+//log.Print("remove21")
             //we have found our node, need to modify the relevant succ and prev values in ring
             //and remove the node
             for j:=0;j<len(self.ring);j++{
+//log.Print("remove22")
             //Fix the successor node
                 if self.ring[j].ip==self.ring[i].succ{
+//log.Print("remove23")
                     self.ring[j].prev = self.ring[i].prev
                     self.ring[j].start = self.ring[i].start
                 }
             //Fix the predecessor node
+//log.Print("remove24")
                 if self.ring[j].ip==self.ring[i].prev{
+//log.Print("remove25")
                     self.ring[j].succ=self.ring[i].succ
                 }
             }
+//log.Print("remove26")
             //Remove the node
             self.ring = append(self.ring[:i],self.ring[i+1:]...)
+//log.Print("remove27")
             return "","",nil
         }
     }
@@ -258,10 +302,10 @@ var node_status []bool = make ([]bool,300)
 	// initialize
     var chord Chord
     chord.initialize()
-log.Print(chord.ring)
+//log.Print(chord.ring)
     replication := &ReplicationService{ _chord: &chord }
 
-log.Print(self.config.Backs)
+//log.Print(self.config.Backs)
 	for i := range self.config.Backs {
 		self.workers = append(self.workers, worker{
 			address: self.config.Backs[i],
@@ -272,7 +316,7 @@ log.Print(self.config.Backs)
 	}
 
 	go replication.run()
-log.Print(1)
+//log.Print(1)
 	for {
 		// Heartbeat period
 		time.Sleep(1 * time.Second)
@@ -284,26 +328,28 @@ log.Print(1)
         keyvalue := KeyValue{Key:key,Value:value}
         succ:= false
 
-log.Print(2)
+//log.Print(2)
     for i:= range self.config.Backs {
         cur_node_status := false
         err_node_status := self.workers[i].handler.Set(&keyvalue, &succ)
-        //If you are able to do above "Set" operation, then the node is up
-log.Print(3)
+        //If you are able to do above "Set" operation, then the node is updating
+//log.Print(3)
         if err_node_status!=nil{
-            if(succ==true){
+            log.Print("not up - ",self.config.Backs[i])}
+
+        if err_node_status==nil{
+         if(succ==true){
                 //the operation had succeeded, the node is up
                 //TODO-is my understanding of succ correct
                 cur_node_status=true
+//log.Print(cur_node_status)
             }else{
                 //node is down
                 cur_node_status=false
-            }
-        }else{
-            cur_node_status=true
-        }
+//log.Print(cur_node_status)
+            }}
 
-log.Print(4)
+//log.Print(4)
         var succ2,succ3 bool
         var next,prev string
 
@@ -313,12 +359,14 @@ log.Print(4)
             //Call replication service
             //modify ring - add node
 			var err1 error
-log.Print(5)
-log.Print("len of chord.ring=", len(chord.ring))
-log.Print(chord.ring)
+//log.Print(5)
+//vineet
+//log.Print("len of chord.ring=", len(chord.ring))
+//log.Print(chord.ring)
 			next,prev,err1 = chord.addNodetoRing(self.config.Backs[i])
-log.Print(6)
-log.Print(chord.ring)
+//vineet
+            //log.Print(6)
+//log.Print(chord.ring)
 			if err1!=nil{
 				fmt.Errorf("error in adding node")
 			}
@@ -326,9 +374,9 @@ log.Print(chord.ring)
             if err1!=nil{
                 fmt.Errorf("chordminisnapshot network error. check.")
             }
-log.Print(7)
+//log.Print(7)
 			go replication.notifyJoin(&chordminisnapshot)
-log.Print(8)
+//log.Print(8)
             //add successor/previous keys on the corresponding nodes
             err2:=self.workers[i].handler.Set(&KeyValue{
                 Key: "NEXT",
@@ -336,14 +384,32 @@ log.Print(8)
                 if err2!=nil || succ2 !=true{
                     fmt.Errorf("Error with Set NEXT")
                 }
-log.Print(9)
+/*
+                        var value40 string
+                        //Testing to see if the value is written correctly
+                        err40:=self.workers[i].handler.Get("NEXT",&value40)
+                        if err40!=nil{
+                            log.Print("error reading NEXT value")
+                        }
+                        log.Print("NEXT VALUE", value40)
+                        */
+//log.Print(9)
             err3:=self.workers[i].handler.Set(&KeyValue{
                 Key: "PREV",
                 Value: prev}, &succ3)
                 if err3!=nil || succ3!=true{
                     fmt.Errorf("Error with Set PREV")
                 }
-log.Print(10)
+//log.Print(10)
+/*
+                        var value401 string
+                        //Testing to see if the value is written correctly
+                        err401:=self.workers[i].handler.Get("PREV",&value401)
+                        if err401!=nil{
+                            log.Print("error reading NEXT value")
+                        }
+                        log.Print("NEXT VALUE", value401)
+*/
                 //TODO-also modify these values on the other nodes
                 var succ4,succ5 bool
                 for j:=0;j<len(self.workers);j++{
@@ -352,59 +418,87 @@ log.Print(10)
                         if err4!=nil || succ4!=true{
                             return fmt.Errorf("Error: with set NEXT in prev")
                         }
-                    }
-log.Print(11)
+ /*                       var value41 string
+                        //Testing to see if the value is written correctly
+                        err41:=self.workers[j].handler.Get("NEXT",&value41)
+                        if err41!=nil{
+                            log.Print("error reading NEXT value")
+                        }
+                        log.Print("NEXT VALUE", value41)
+   */                 }
+//log.Print(11)
                     if self.config.Backs[j]==next{
                         err5:=self.workers[j].handler.Set(&KeyValue{Key:"PREV",Value:self.config.Backs[i]},&succ5)
                         if err5!=nil || succ5!=true{
                             return fmt.Errorf("Error: with set PREV in next")
                         }
+    /*                    var value42 string
+                        //Testing to see if the value is written correctly
+                        err42:=self.workers[j].handler.Get("PREV",&value42)
+                        if err42!=nil{
+                            log.Print("error reading NEXT value")
+                        }
+                        log.Print("NEXT VALUE", value42) */
                     }
-log.Print(12)
+//log.Print(12)
                 }
            node_status[i]=true
             }else{
                 //Nothing to do
-log.Print(13)
+//log.Print(13)
             }
         }else {
             if cur_node_status==true{
-                //Nothing to do
-log.Print(14)
+                //Nothing to does
+//log.Print(14)
             }else{
                 //Node has failed
                 //Call replication service
-log.Print(15)
+//log.Print(15)
             chordminisnapshot1,errr:=CreateMiniChord(self.config.Backs[i],&chord)
             if errr!=nil{
                 fmt.Errorf("chordminisnapshot network error. check.")
             }
 			go replication.notifyLeave(&chordminisnapshot1)
-log.Print(16)
+//log.Print(16)
+//vineet
+//log.Print(chord.ring)
             //Remove node - modify ring
                 var err2 error
                 next,prev,err2 = chord.removeNodefromRing(self.config.Backs[i])
-log.Print(17)
+//log.Print(17)
+//vineet
+//log.Print(chord.ring)
                 if err2!=nil{
+//log.Print(18)
                     fmt.Errorf("Error removing node.")
                 }
                 //TODO-Modify successor/previous keys
                 //TODO for the other nodes
                 var succ4,succ5 bool
                 for j:=0;j<len(self.workers);j++{
+//log.Print(19)
                     if self.config.Backs[j]==prev{
+//log.Print(191)
                         err4:=self.workers[j].handler.Set(&KeyValue{Key:"NEXT",Value:next},&succ4)
+//log.Print(192)
                         if err4!=nil || succ4!=true{
+//log.Print(193)
                             return fmt.Errorf("Error: with set NEXT in prev")
                         }
                     }
+//log.Print(194)
                     if self.config.Backs[j]==next{
+//log.Print(195)
                         err5:=self.workers[j].handler.Set(&KeyValue{Key:"PREV",Value:prev},&succ5)
+//log.Print(196)
                         if err5!=nil || succ5!=true{
+//log.Print(197)
                             return fmt.Errorf("Error: with set PREV in next")
                         }
                     }
                 }
+//log.Print(198)
             node_status[i]=false
         }
     }
