@@ -68,19 +68,26 @@ func (self *Chord) lookupValinRing(val uint32) (string, error){
     if len(self.ring)>1{
         for j:=0;j<len(self.ring);j++{
             //Normal case, whent he start value is less than the end value
+
+log.Print(val,  self.ring[j].start,  self.ring[j].end)
           if self.ring[j].start < self.ring[j].end {
-            if (self.ring[j].start < val) && (self.ring[j].end > val){
+       //       log.Print("12")
+            if self.ring[j].start < val && self.ring[j].end > val{
+         //       log.Print("23")
                 return self.ring[j].ip, nil
             }
         }
             //else check for the "0" key jump case i.e. the val is between end and start
             if (self.ring[j].start > self.ring[j].end){
+   //             log.Print("11")
                 if((self.ring[j].end > val && val > 0) || (self.ring[j].start < val)){
+     //               log.Print("22")
                     return self.ring[j].ip, nil
                 }
             }
         }
     }
+    log.Print(":O")
     return "", fmt.Errorf("should never reach here. Check function")
 }
 
@@ -102,7 +109,12 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
     var Node node
     val := getHash(ip)
 
-    /*//Testing - vineet
+/*
+    _,err456:=self.getIPbyBinName("localhost:28049")
+    if err456!=nil{
+        log.Printf("err message is %s", err456)
+    }
+  */  /*//Testing - vineet
     _,err56:=self.Succ_node_ip(ip)
     if err56!=nil{
         log.Printf("error message is %s",err56 )
