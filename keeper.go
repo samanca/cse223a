@@ -91,9 +91,11 @@ func (self *Chord) listAllActiveNodes() ([]string, error){
     return list_of_active_nodes,nil
 }
 
-func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
+func (self *Chord) addNodetoRing(ip string) (string, string, error){
     var Node node
     val := getHash(ip)
+
+    //var next,prev string
 
     //Folowing values are fixed regardless of node location in ring
     Node.ip = ip
@@ -119,7 +121,6 @@ func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
             //So, now both the nodes are fixed. The initial node covers the "0" key
         }/*else{
             if len(self.ring)==2{
-                //TODO
             }
         }*/
         //TODO-above. I think len=2 case is handled in loop. Confirm.
@@ -153,7 +154,7 @@ func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
                 break
         }
     }
-            return fmt.Errorf("some error, the node must be inserted somewhere")
+            return "","",fmt.Errorf("some error, the node must be inserted somewhere")
     }
     }
     //Fix the predecessor's arc and prev value
@@ -167,21 +168,21 @@ func (self *Chord) addNodetoRing(ip string, next *string, prev *string) error{
     //TODO-call Saman function before appending node. But is this the right place?
     //replication.notifyJoin(Node.ip)
     self.ring = append(self.ring, Node) //TODO-is this how you use append
-    return nil
+    return  Node.succ,Node.prev,nil
 }
 
-func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) error{
+func (self *Chord) removeNodefromRing(ip string) (string, string, error){
     if len(self.ring)==0{
-        return fmt.Errorf("ring already empty, cannot remove node")
+        return "","",fmt.Errorf("ring already empty, cannot remove node")
     }
     if len(self.ring)==1{
         if self.ring[1].ip==ip{
             //the only node in the ring is the node we want to delete
             //create ring of size 0
             self.ring = make ([]node, 0)
-            return nil
+            return "","",nil
         }else{
-            return fmt.Errorf("the only node in ring does not share ip with the node being removed. Error")
+            return "","",fmt.Errorf("the only node in ring does not share ip with the node being removed. Error")
         }
     }
     if len(self.ring)==2{
@@ -193,7 +194,7 @@ func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) err
         if self.ring[1].ip==ip{
             j=0
         }else{
-            return fmt.Errorf("Ring has two nodes, but none of the nodes match the ip being deleted")
+            return "","",fmt.Errorf("Ring has two nodes, but none of the nodes match the ip being deleted")
         }}
 
 //Modify ring to contain only one node
@@ -206,9 +207,9 @@ func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) err
 
         //above should leave only one node in the ring
         if len(self.ring)!=1{
-            return fmt.Errorf("ring is not of size 1. Error")
+            return "","",fmt.Errorf("ring is not of size 1. Error")
         }
-        return nil
+        return "","",nil
     }
 
     for i:=0;i<len(self.ring);i++{
@@ -230,10 +231,10 @@ func (self *Chord) removeNodefromRing(ip string, next *string, prev *string) err
             //TODO - call Saman function before deleting node
             //replication.notifyLeave(ip)
             self.ring = append(self.ring[:i],self.ring[i+1:]...)
-            return nil
+            return "","",nil
         }
     }
-    return nil
+    return "","",nil
 }
 
 //keeps a count mod 3. Everytime it is 0, we call the Clock().
@@ -303,9 +304,14 @@ func (self *keeper) run() error {
         if node_status[i]==false{
             if cur_node_status==true{
             //new node has joined
-            //TODO-modify ring
+            //Call replication service
             replication.notifyJoin(self.config.Backs[i])
-            chord.addNodetoRing(self.config.Backs[i],&next,&prev)
+            //modify ring - add node
+            var err1 error
+            next,prev,err1 = chord.addNodetoRing(self.config.Backs[i])
+            if err1!=nil{
+                fmt.Errorf("error in adding node")
+            }
 
             //TODO-add successor/previous keys on the corresponding nodes
             self.workers[i].handler.Set(&KeyValue{
@@ -316,9 +322,9 @@ func (self *keeper) run() error {
                 Value: prev}, &succ3)
                 //TODO-Check for errors
 
+                //TODO-also modify these values on the other nodes
+                //TODO-Pain
 
-            //TODO-call replication
-            //chord.ReplicaSetJoin(self.config.Backs[i])
             }else{
                 //Nothing to do
             }
@@ -327,19 +333,20 @@ func (self *keeper) run() error {
                 //Nothing to do
             }else{
                 //Node has failed
-                //TODO-Modify ring, remove node
+                //Call replication service
                 replication.notifyLeave(self.config.Backs[i])
-                chord.removeNodefromRing(self.config.Backs[i],&next,&prev)
+                //Remove node - modify ring
+                var err2 error
+                next,prev,err2 = chord.removeNodefromRing(self.config.Backs[i])
+                if err2!=nil{
+                    fmt.Errorf("Error removing node.")
+                }
 
                 //TODO-Modify successor/previous keys
-                //MODIFY THE CORRECT NODES
+                //TODO for the other nodes
 
-                //TODO-call replication
-                //go ReplicaSetFail(self.config.Backs[i])
-            }
         }
     }
-
     //Perform the following clock sync only every 3rd second
      if count==2{
 		// Query workers
@@ -391,3 +398,5 @@ func (self *keeper) run() error {
 	}
 	return errors.New("Keeper terminated unexpectedly!");
 }
+}
+
