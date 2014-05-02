@@ -228,7 +228,7 @@ func (self *Chord) removeNodefromRing(ip string) (string, string, error){
 //log.Print("remove9")
         }else{
         if self.ring[1].ip==ip{
-            ip_used=self.ring[1].ip
+            ip_used=self.ring[0].ip
 //log.Print("remove10")
         }else{
 //log.Print("remove11")

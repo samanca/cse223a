@@ -2,7 +2,7 @@
 package triblab
 //import "trib"
 import "fmt"
-import "log"
+//import "log"
 //comment pushed by vineet to check push
 
 
@@ -45,7 +45,7 @@ func (self *Chord) Prev_node_ip(ip string) (string,error){
         if self.ring[i].ip==ip{
             return self.ring[i].prev,nil
         }
-        return "",fmt.Errorf("IP not found in ring. Error!")
+        //return "",fmt.Errorf("IP not found in ring. Error!")
     }
     return "",fmt.Errorf("Should not have reached here, check prev_node function")
 }
