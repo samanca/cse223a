@@ -8,6 +8,7 @@ import "fmt"
 type OpLogClient struct {
 	addr string
 	ns string
+	cli *client
 }
 
 func (self *OpLogClient) acquireConnection() (*rpc.Client, error) {
@@ -26,6 +27,10 @@ func (self *OpLogClient) makeNS(key string) string {
  * Implementing KeyString
  */
 
+ func (self *OpLogClient) Get(key string, value *string) error {
+	return self.cli.Get(key,value);
+}
+
 func (self *OpLogClient) Set(kv *KeyValue, succ *bool) error {
 	c, err := self.acquireConnection();
 	if err == nil {
@@ -33,7 +38,7 @@ func (self *OpLogClient) Set(kv *KeyValue, succ *bool) error {
 		op := &OpLogEntry{opCode:OP_SET,data:kv2}
 		op_j, e := json.Marshal(op)
 		if e != nil {
-		return fmt.Errorf("error while marshaling the OP Code")
+		return fmt.Errorf("Error while marshaling the OP Code")
 		}
 		OPkv := KeyValue{ Key:LOG_KEY , Value: string(op_j) }
 		err = c.Call("Storage.ListAppend", &OPkv, succ);
@@ -43,6 +48,13 @@ func (self *OpLogClient) Set(kv *KeyValue, succ *bool) error {
 	return err;
 }
 
+func (self *OpLogClient) Keys(p *Pattern, list *List) error {
+	return self.cli.Keys(p,list);
+}
+
+func (self *OpLogClient) ListGet(key string, list *List) error {
+	return self.cli.ListGet(key,list);
+}
 
 func (self *OpLogClient) ListAppend(kv *KeyValue, succ *bool) error {
 	c, err := self.acquireConnection();
@@ -51,7 +63,7 @@ func (self *OpLogClient) ListAppend(kv *KeyValue, succ *bool) error {
 		op := &OpLogEntry{opCode:OP_SET,data:kv2}
 		op_j, e := json.Marshal(op)
 		if e != nil {
-		return fmt.Errorf("error while marshaling the OP Code")
+		return fmt.Errorf("Error while marshaling the OP Code")
 		}
 		OPkv := KeyValue{ Key:LOG_KEY , Value: string(op_j) }
 		err = c.Call("Storage.ListAppend", &OPkv, succ);
@@ -68,7 +80,7 @@ func (self *OpLogClient) ListRemove(kv *KeyValue, n *int) error {
 		op := &OpLogEntry{opCode:OP_SET,data:kv2}
 		op_j, e := json.Marshal(op)
 		if e != nil {
-		return fmt.Errorf("error while marshaling the OP Code")
+		return fmt.Errorf("Error while marshaling the OP Code")
 		}
 		OPkv := KeyValue{ Key:LOG_KEY , Value: string(op_j) }
 		err = c.Call("Storage.ListAppend", &OPkv, succ);
@@ -77,17 +89,15 @@ func (self *OpLogClient) ListRemove(kv *KeyValue, n *int) error {
 	return err;
 }
 
+func (self *OpLogClient) ListKeys(p *Pattern, list *List) error {
+	return self.cli.ListGet(p,list);
+}
 
 /*
  * Implementing Storage
  */
 func (self *OpLogClient) Clock(atLeast uint64, ret *uint64) error {
-	c, err := self.acquireConnection();
-	if err == nil {
-		err = c.Call("Storage.Clock", atLeast, ret);
-		c.Close()
-	}
-	return err;
+	return self.cli.Clock(atLeast,ret)
 }
 
-var _ Storage = new(client)
+var _ Storage = new(OpLogClient)

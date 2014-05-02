@@ -51,6 +51,13 @@ func (self *Chord) initialize() error{
     return nil
 }
 
+func (self *Chord) printRing() error{
+    for i := range self.ring{
+        fmt.Printf("%+v",self.ring[i])
+    }
+    return nil
+}
+
 func (self *Chord) lookupValinRing(val uint32) (string, error){
     if len(self.ring)==0{
         return "",fmt.Errorf("ring is of size 0 nodes. Cannot find a node.")
@@ -165,8 +172,6 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
         }
     }
 }
-    //TODO-call Saman function before appending node. But is this the right place?
-    //replication.notifyJoin(Node.ip)
     self.ring = append(self.ring, Node) //TODO-is this how you use append
     return  Node.succ,Node.prev,nil
 }
@@ -228,8 +233,6 @@ func (self *Chord) removeNodefromRing(ip string) (string, string, error){
                 }
             }
             //Remove the node
-            //TODO - call Saman function before deleting node
-            //replication.notifyLeave(ip)
             self.ring = append(self.ring[:i],self.ring[i+1:]...)
             return "","",nil
         }
@@ -256,6 +259,8 @@ func (self *keeper) node_status() error{
 func (self *keeper) run() error {
 	// initialize
     var chord Chord
+    chord.initialize()
+    chord.printRing()
 	replication := &ReplicationService{ chord: &chord }
 
 	for i := range self.config.Backs {
@@ -313,17 +318,37 @@ func (self *keeper) run() error {
 			}
 			replication.notifyJoin(self.config.Backs[i])
 
-				//TODO-add successor/previous keys on the corresponding nodes
-            self.workers[i].handler.Set(&KeyValue{
+            //add successor/previous keys on the corresponding nodes
+            err2:=self.workers[i].handler.Set(&KeyValue{
                 Key: "NEXT",
                 Value: next},&succ2)
-            self.workers[i].handler.Set(&KeyValue{
+                if err2!=nil || succ2 !=true{
+                    fmt.Errorf("Error with Set NEXT")
+                }
+            err3:=self.workers[i].handler.Set(&KeyValue{
                 Key: "PREV",
                 Value: prev}, &succ3)
-                //TODO-Check for errors
+                if err3!=nil || succ3!=true{
+                    fmt.Errorf("Error with Set PREV")
+                }
 
                 //TODO-also modify these values on the other nodes
-                //TODO-Pain
+                var succ4,succ5 bool
+                for j:=0;j<len(self.workers);j++{
+                    if self.config.Backs[j]==prev{
+                        err4:=self.workers[j].handler.Set(&KeyValue{Key:"NEXT",Value:self.config.Backs[i]},&succ4)
+                        if err4!=nil || succ4!=true{
+                            return fmt.Errorf("Error: with set NEXT in prev")
+                        }
+                    }
+
+                    if self.config.Backs[j]==next{
+                        err5:=self.workers[j].handler.Set(&KeyValue{Key:"PREV",Value:self.config.Backs[i]},&succ5)
+                        if err5!=nil || succ5!=true{
+                            return fmt.Errorf("Error: with set PREV in next")
+                        }
+                    }
+                }
 
             }else{
                 //Nothing to do
@@ -341,9 +366,23 @@ func (self *keeper) run() error {
                 if err2!=nil{
                     fmt.Errorf("Error removing node.")
                 }
-
                 //TODO-Modify successor/previous keys
                 //TODO for the other nodes
+                var succ4,succ5 bool
+                for j:=0;j<len(self.workers);j++{
+                    if self.config.Backs[j]==prev{
+                        err4:=self.workers[j].handler.Set(&KeyValue{Key:"NEXT",Value:next},&succ4)
+                        if err4!=nil || succ4!=true{
+                            return fmt.Errorf("Error: with set NEXT in prev")
+                        }
+                    }
+                    if self.config.Backs[j]==next{
+                        err5:=self.workers[j].handler.Set(&KeyValue{Key:"PREV",Value:prev},&succ5)
+                        if err5!=nil || succ5!=true{
+                            return fmt.Errorf("Error: with set PREV in next")
+                        }
+                    }
+                }
 
         }
     }

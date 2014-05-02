@@ -29,6 +29,7 @@ func (self *Chord1)locate_node(id uint32) uint32{
     var max uint32
     var min uint32
     var r uint32
+//    var prev uint32
     found:=false
     max=ring[0].hash//
     min=ring[0].hash
@@ -39,6 +40,8 @@ func (self *Chord1)locate_node(id uint32) uint32{
             if(ring[0].hash>id){
                 succ=ring[0].hash
                 ring[0].end=id
+        //        prev=ring[0].hash
+          //      ring[0].begin=id
             }else{
                 succ= ring[0].end
                 ring[0].end=id
