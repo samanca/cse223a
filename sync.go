@@ -38,6 +38,11 @@ func _sync(backend string, replicas []string, chord *Chord) error {
 			// 2.5 - is it mine?
 			owner, err := chord.getIPbyBinName(removeNS(op.data.Key))
 
+			/*
+			 * if the current node is the owner, I just need to replicate data to the next and next_next node
+			 * otherwise, the previous node should be the owner, so I should write it to the previous and next node
+			 */
+
 			if err != nil {
 				log.Print("error getting bin name: %s", err)
 			}
@@ -50,9 +55,9 @@ func _sync(backend string, replicas []string, chord *Chord) error {
 					if e != nil { return e }
 				}
 
-				// 4 - Perform operation
-				e = _doWhatISay(be, &op)
-				if e != nil { return e }
+				// 4 - Perform operation (we already have the data on the backend)
+				//e = _doWhatISay(be, &op)
+				//if e != nil { return e }
 			} else {
 
 				// 2.75 - Move it to the right place
