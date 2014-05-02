@@ -12,10 +12,9 @@ const (
 
 /*
  * TODO check for race conditions while accessing Chord
- * TODO use locking to avoid data re-ordering on replica leave/join
  */
 type ReplicationService struct {
-	chord *Chord
+	_chord *Chord
 }
 
 // Background replication service (only for OpLog)
@@ -27,8 +26,8 @@ func (self *ReplicationService) run() error {
 		// sleep
 		time.Sleep(1 * time.Second)
 
-		// 1.0 - list of active back-ends
-		live_back_ends, err := self.chord.listAllActiveNodes()
+		// 1 - list of active back-ends
+		live_back_ends, err := self._chord.listAllActiveNodes()
 		if err != nil {
 			log.Print("unable to get the list of active nodes: %s", err)
 			continue
@@ -37,33 +36,30 @@ func (self *ReplicationService) run() error {
 			log.Print("--%s", live_back_ends[i])
 		}
 
-		// 1.5 - don't replicate data to nodes in locked state (in progress replication)
-		// TODO remove primary nodes from back-ends list
-
-		// 2.0 - initialize channel
+		// 2 - initialize channel
 		c := make(chan bool)
 
-		// 3.0 - create concurrent sync threads
+		// 3 - create concurrent sync threads
 		for i := range live_back_ends {
 
 			replicas := make([]string, 2)
 
-			replicas[0], e = self.chord.Succ_node_ip(live_back_ends[i])
+			replicas[0], e = self._chord.Succ_node_ip(live_back_ends[i])
 			if e != nil { c<-false; continue }
 
-			replicas[1], e = self.chord.Succ_node_ip(replicas[0])
+			replicas[1], e = self._chord.Succ_node_ip(replicas[0])
 			if e != nil { c<-false; continue }
 
 			go Sync(live_back_ends[i], replicas, &c)
 		}
 
-		// 4.0 - wait for join
+		// 4 - wait for join
 		var succ int = 0
 		for i := 0; i < len(live_back_ends); i++ {
 			if (<-c) { succ++ }
 		}
 
-		// 5.0 - log replication statistics
+		// 5 - log replication statistics
 		log.Print("background replication: %d / %d", succ, len(live_back_ends))
 	}
 	return fmt.Errorf("unexcpected behavior in replication service!")
@@ -92,7 +88,7 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 	for i := range keys.L {
 
 		// filter
-		primary_copy, e := self.chord.getIPbyBinName(extractNS(keys.L[i]))
+		primary_copy, e := self._chord.getIPbyBinName(extractNS(keys.L[i]))
 		if e !=  nil {
 			log.Print("error mapping user to bin: %s", e)
 			continue
@@ -128,7 +124,7 @@ func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference s
 	for i := range lists.L {
 
 		// filter
-		primary_copy, e := self.chord.getIPbyBinName(extractNS(lists.L[i]))
+		primary_copy, e := self._chord.getIPbyBinName(extractNS(lists.L[i]))
 		if e !=  nil {
 			log.Print("error mapping user to bin: %s", e)
 			continue
@@ -180,31 +176,19 @@ func (self *ReplicationService) replicateThrough(c *chan bool, source, dest, tp 
 }
 
 // TODO@Vineet Should be invoked after reflecting the change in Chord
-func (self *ReplicationService) notifyJoin(node string) error {
-	// TODO
-	var err error
-	var prev_prev, prev, next string
+func (self *ReplicationService) notifyJoin(chord *ChordMiniSnapshot) error {
 
-	// query Chord
-	prev, err = self.chord.Prev_node_ip(node)
-	if err != nil { return err }
-	prev_prev, err = self.chord.Prev_node_ip(prev)
-	if err != nil { return err }
-
-	next, err = self.chord.Succ_node_ip(node)
-	if err != nil { return err }
-
-	if prev == EMPTY_STRING {
+	if chord.ofSizeOne() {
 		return nil // nothing to do as |Chord| < 2
 	}
 
 	// init channel
 	c := make(chan bool)
 
-	go self.replicateThrough(&c, node, node, next)
-	go self.replicate(&c, prev, node)
-	if prev_prev != prev {
-		go self.replicate(&c, prev_prev, node)
+	go self.replicateThrough(&c, chord.me, chord.me, chord.next)
+	go self.replicate(&c, chord.prev, chord.me)
+	if chord.prev_prev != chord.prev {
+		go self.replicate(&c, chord.prev_prev, chord.me)
 	} else {
 		c<-true
 	}
@@ -227,23 +211,9 @@ func (self *ReplicationService) notifyJoin(node string) error {
 
 // TODO refactor (too much duplicated code)
 // TODO@Vineet Should be invoked before reflecting node failure in Chord
-func (self *ReplicationService) notifyLeave(node string) error {
+func (self *ReplicationService) notifyLeave(chord *ChordMiniSnapshot) error {
 
-	var err error
-	var prev_prev, prev, next, next_next, next_next_next string
-
-	// query Chord
-	prev, err = self.chord.Prev_node_ip(node)
-	if err != nil { return err }
-	prev_prev, err = self.chord.Prev_node_ip(prev)
-	if err != nil { return err }
-
-	next, err = self.chord.Succ_node_ip(node)
-	if err != nil { return err }
-	next_next, err = self.chord.Succ_node_ip(next)
-	if err != nil { return err }
-
-	if prev == EMPTY_STRING || prev == next || prev_prev == next {
+	if chord.smallerThanFour() {
 		return nil // nothing to do as |Chord| < 4
 	}
 
@@ -251,9 +221,9 @@ func (self *ReplicationService) notifyLeave(node string) error {
 	c := make(chan bool)
 
 	// parallel replication
-	go self.replicateThrough(&c, node, next_next_next, next)
-	go self.replicate(&c, prev, next_next)
-	go self.replicate(&c, prev_prev, next)
+	go self.replicateThrough(&c, chord.me, chord.next_next_next, chord.next)
+	go self.replicate(&c, chord.prev, chord.next_next)
+	go self.replicate(&c, chord.prev_prev, chord.next)
 
 	// wait for join
 	var succ int = 0

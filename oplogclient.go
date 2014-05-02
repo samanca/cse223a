@@ -90,7 +90,7 @@ func (self *OpLogClient) ListRemove(kv *KeyValue, n *int) error {
 }
 
 func (self *OpLogClient) ListKeys(p *Pattern, list *List) error {
-	return self.cli.ListGet(p,list);
+	return self.cli.ListKeys(p,list);
 }
 
 /*
