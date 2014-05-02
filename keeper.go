@@ -102,6 +102,13 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
     var Node node
     val := getHash(ip)
 
+    /*//Testing - vineet
+    _,err56:=self.Succ_node_ip(ip)
+    if err56!=nil{
+        log.Printf("error message is %s",err56 )
+    }
+*/
+
     //var next,prev string
 
     //Folowing values are fixed regardless of node location in ring

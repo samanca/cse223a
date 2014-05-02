@@ -2,7 +2,7 @@
 package triblab
 //import "trib"
 import "fmt"
-
+import "log"
 //comment pushed by vineet to check push
 
 
@@ -13,6 +13,7 @@ type Chord struct {
 }
 
 func (self *Chord) Succ_node_ip(ip string) (string,error){
+
     if len(self.ring)==0{
         return "",fmt.Errorf("Ring with no nodes. Please check")
     }
@@ -22,10 +23,11 @@ func (self *Chord) Succ_node_ip(ip string) (string,error){
     }
 
     for i:=0;i<len(self.ring);i++{
+//log.Print("ip and current ip", ip, self.ring[i].ip)
         if self.ring[i].ip==ip{
             return self.ring[i].succ,nil
         }
-        return "",fmt.Errorf("IP not found in ring. Error!")
+        //return "",fmt.Errorf("IP not found in ring. Error!")
     }
     return "",fmt.Errorf("Should not have reached here, check succ_node function")
 }
