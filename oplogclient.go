@@ -1,18 +1,13 @@
 package triblab
 import . "trib"
-import "net/rpc"
 import "encoding/json"
 import "fmt"
-//import "strings"
 
 type OpLogClient struct {
 	addr string
 	ns string
 	cli *client
-}
-
-func (self *OpLogClient) acquireConnection() (*rpc.Client, error) {
-	return rpc.Dial("tcp", self.addr);
+	_log *client
 }
 
 func (self *OpLogClient) makeNS(key string) string {
@@ -25,6 +20,7 @@ func (self *OpLogClient) makeNS(key string) string {
 
 func (self *OpLogClient) init() {
 	self.cli = &client{ addr: self.addr, ns: self.ns }
+	self._log = &client{ addr: self.addr }
 }
 
 /*
@@ -35,21 +31,29 @@ func (self *OpLogClient) Get(key string, value *string) error {
 	return self.cli.Get(key,value);
 }
 
-func (self *OpLogClient) Set(kv *KeyValue, succ *bool) error {
-	c, err := self.acquireConnection();
-	if err == nil {
-		kv2 := KeyValue{ Key: self.makeNS(kv.Key), Value: kv.Value }
-		op := &OpLogEntry{opCode:OP_SET,data:kv2}
-		op_j, e := json.Marshal(op)
-		if e != nil {
-		return fmt.Errorf("Error while marshaling the OP Code")
-		}
-		OPkv := KeyValue{ Key:LOG_KEY , Value: string(op_j) }
-		err = c.Call("Storage.ListAppend", &OPkv, succ);
+func (self *OpLogClient) log(opCode uint, kv *KeyValue) error {
+	var succ bool
 
-		c.Close()
+	op := &OpLogEntry{ opCode: opCode, data: *kv }
+	jsonObj, e := json.Marshal(op)
+	if e != nil {
+		return fmt.Errorf("Error while marshaling the OP Code")
 	}
-	return err;
+
+	OPkv := KeyValue{ Key:LOG_KEY , Value: string(jsonObj) }
+	e = self._log.ListAppend(&OPkv, &succ)
+	if e != nil { return e }
+	if !succ { return fmt.Errorf("error while appending to the log") }
+	return nil
+}
+
+func (self *OpLogClient) Set(kv *KeyValue, succ *bool) error {
+
+	kv2 := KeyValue{ Key: self.makeNS(kv.Key), Value: kv.Value }
+	e := self.log(OP_SET, &kv2)
+	if e != nil { return e }
+	e = self.cli.Set(kv, succ)
+	return e
 }
 
 func (self *OpLogClient) Keys(p *Pattern, list *List) error {
@@ -61,40 +65,49 @@ func (self *OpLogClient) ListGet(key string, list *List) error {
 }
 
 func (self *OpLogClient) ListAppend(kv *KeyValue, succ *bool) error {
-	c, err := self.acquireConnection();
-	if err == nil {
-		kv2 := KeyValue{ Key: self.makeNS(kv.Key), Value: kv.Value }
-		op := &OpLogEntry{opCode:OP_SET,data:kv2}
-		op_j, e := json.Marshal(op)
-		if e != nil {
-		return fmt.Errorf("Error while marshaling the OP Code")
-		}
-		OPkv := KeyValue{ Key:LOG_KEY , Value: string(op_j) }
-		err = c.Call("Storage.ListAppend", &OPkv, succ);
-		c.Close()
-	}
-	return err;
+
+	kv2 := KeyValue{ Key: self.makeNS(kv.Key), Value: kv.Value }
+	e := self.log(OP_LIST_APPEND, &kv2)
+	if e != nil { return e }
+	e = self.cli.ListAppend(kv, succ)
+	return e
 }
 
 func (self *OpLogClient) ListRemove(kv *KeyValue, n *int) error {
-	var succ bool
-	c, err := self.acquireConnection();
-	if err == nil {
-		kv2 := KeyValue{ Key: self.makeNS(kv.Key), Value: kv.Value }
-		op := &OpLogEntry{opCode:OP_SET,data:kv2}
-		op_j, e := json.Marshal(op)
-		if e != nil {
-		return fmt.Errorf("Error while marshaling the OP Code")
-		}
-		OPkv := KeyValue{ Key:LOG_KEY , Value: string(op_j) }
-		err = c.Call("Storage.ListAppend", &OPkv, succ);
-		c.Close()
-	}
-	return err;
+
+	kv2 := KeyValue{ Key: self.makeNS(kv.Key), Value: kv.Value }
+	e := self.log(OP_LIST_REMOVE, &kv2)
+	if e != nil { return e }
+	e = self.cli.ListRemove(kv, n)
+	return e
 }
 
 func (self *OpLogClient) ListKeys(p *Pattern, list *List) error {
-	return self.cli.ListKeys(p,list);
+	e := self.cli.ListKeys(p,list);
+	if e != nil { return e }
+
+	// removing OpLog from ListKeys
+	var opLogExists bool = false
+	for i := range list.L {
+		if list.L[i] == LOG_KEY {
+			opLogExists = true
+			break
+		}
+	}
+
+	if !opLogExists { return nil }
+
+	var list2 List
+	list2.L = make([]string, len(list.L) - 1)
+	var j uint = 0
+	for i := range list.L {
+		if (list.L[i] != LOG_KEY) {
+			list2.L[j] = list.L[i]
+			j++
+		}
+	}
+	list.L = list2.L
+	return nil
 }
 
 /*
