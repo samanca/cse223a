@@ -24,18 +24,31 @@ func getHash1(name string) uint32 {
 
 func (self *Chord1)locate_node(id uint32) uint32{
     var succ uint32
+    var id_max int
+    var max uint32
+    var found bool
+    found=false
+    max=0
+
     fmt.Printf("Ring size is %d\n",len(ring))
     for i:=0;i<len(ring);i++{
-        if (id > ring[i].hash && id < ring[i].end) || (ring[i].hash==ring[i].end){
-            succ= ring[i].end
-            if ring[i].end<id{
-                ring[i].end=id
-            }
-            break
-        }else{
-        fmt.Printf("Didnt find the id on the circle\n")
+        if(max < ring[i].hash){
+            max=ring[i].hash
+            id_max=i
         }
-    }
+            
+        if (id > ring[i].hash && id < ring[i].end && found==false) || (ring[i].hash==ring[i].end && found==false){
+            succ= ring[i].end
+            ring[i].end=id
+            found=true
+        }
+    }  
+        if (id > ring[id_max].hash && len(ring)>2) {
+            ring[id_max].end=id
+            succ=ring[0].hash
+            //succ=max
+        }
+                 
 return succ
 }
 
@@ -72,8 +85,9 @@ func (self *Chord1) addNode(ip string){
     Node.end=self.locate_node(val)
     }
     ring = append(ring,Node)
-    fmt.Printf("Node value:%d,Node Succ:%d\n",Node.hash,Node.end)
-
+    for i:=0;i<len(ring);i++{
+    fmt.Printf("Node value:%d,Node Succ:%d\n",ring[i].hash,ring[i].end)
+    }
 }
 //TODO-r}eturn ??
 //TODO- is the hash value returned uitn32?
