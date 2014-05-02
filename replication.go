@@ -29,15 +29,17 @@ func (self *ReplicationService) run() error {
 		// 1 - list of active back-ends
 		live_back_ends, err := self._chord.listAllActiveNodes()
 		if err != nil {
-			log.Print("unable to get the list of active nodes: %s", err)
+			log.Printf("unable to get the list of active nodes: %s", err)
 			continue
 		}
+		/*
 		for i := range live_back_ends {
-			log.Print("--%s", live_back_ends[i])
+			log.Printf("--%s", live_back_ends[i])
 		}
+		*/
 
 		// 2 - initialize channel
-		c := make(chan bool)
+		c := make(chan bool, len(live_back_ends))
 
 		// 3 - create concurrent sync threads
 		for i := range live_back_ends {
@@ -45,22 +47,33 @@ func (self *ReplicationService) run() error {
 			replicas := make([]string, 2)
 
 			replicas[0], e = self._chord.Succ_node_ip(live_back_ends[i])
-			if e != nil { c<-false; continue }
+			if e != nil {
+				log.Printf("error while getting next: %s", e)
+				c<-false; continue
+			}
+			//log.Printf("next for %s is %s", live_back_ends[i], replicas[0])
 
 			replicas[1], e = self._chord.Succ_node_ip(replicas[0])
-			if e != nil { c<-false; continue }
+			if e != nil {
+				log.Printf("error while getting next_next: %s", e)
+				c<-false; continue
+			}
+			//log.Printf("next_next for %s is %s", live_back_ends[i], replicas[1])
 
 			go Sync(live_back_ends[i], replicas, self._chord, &c)
+			//log.Printf("Sync thread created for %s", live_back_ends[i])
 		}
 
 		// 4 - wait for join
 		var succ int = 0
+		//log.Printf("waiting for Sync threads ...")
 		for i := 0; i < len(live_back_ends); i++ {
 			if (<-c) { succ++ }
+			//log.Printf("one returned!")
 		}
 
 		// 5 - log replication statistics
-		log.Print("background replication: %d / %d", succ, len(live_back_ends))
+		log.Printf("background replication: %d / %d", succ, len(live_back_ends))
 	}
 	return fmt.Errorf("unexcpected behavior in replication service!")
 }
@@ -90,7 +103,7 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 		// filter
 		primary_copy, e := self._chord.getIPbyBinName(extractNS(keys.L[i]))
 		if e !=  nil {
-			log.Print("error mapping user to bin: %s", e)
+			log.Printf("error mapping user to bin: %s", e)
 			continue
 		}
 		if primary_copy != reference {
@@ -126,7 +139,7 @@ func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference s
 		// filter
 		primary_copy, e := self._chord.getIPbyBinName(extractNS(lists.L[i]))
 		if e !=  nil {
-			log.Print("error mapping user to bin: %s", e)
+			log.Printf("error mapping user to bin: %s", e)
 			continue
 		}
 		if primary_copy != reference {

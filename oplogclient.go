@@ -34,7 +34,7 @@ func (self *OpLogClient) Get(key string, value *string) error {
 func (self *OpLogClient) log(opCode uint, kv *KeyValue) error {
 	var succ bool
 
-	op := &OpLogEntry{ opCode: opCode, data: *kv }
+	op := &OpLogEntry{ OpCode: opCode, Data: *kv }
 	jsonObj, e := json.Marshal(op)
 	if e != nil {
 		return fmt.Errorf("Error while marshaling the OP Code")

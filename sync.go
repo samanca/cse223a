@@ -45,27 +45,40 @@ func _sync(backend string, replicas []string, chord *Chord) error {
 
 			// 2.1 - I always have to write the data to the next node
 			e = _doWhatISay(rs[0], &op)
-			if e != nil { return e }
+			if e != nil {
+				log.Printf("error while replicating [0]: %s", e)
+				return e
+			}
 
 			// 2.2 - is it mine?
-			owner, err := chord.getIPbyBinName(removeNS(op.data.Key))
+			log.Printf("getting bin for %s (%s)", removeNS(op.Data.Key), op.Data.Key)
+			owner, err := chord.getIPbyBinName(removeNS(op.Data.Key))
 			if err != nil {
-				log.Print("error getting bin name: %s", err)
+				log.Printf("error getting bin name: %s", err)
 			}
 
 			if owner == backend {
 
 				// 2.3.1 - create the other replica
-				if (replicas[1] != backend) { // avoid storing data on the same node twice
+				/*
+				 * avoid storing data on the same node twice (already taken care of by replication)
+				 */
+				//if (replicas[1] != backend) {
 					e = _doWhatISay(rs[1], &op)
-					if e != nil { return e }
-				}
+					if e != nil {
+						log.Printf("error while replicating [1]: %s", e)
+						return e
+					}
+				//}
 
 			} else {
 
 				// 2.3.2 - Write to the real owner
 				e = _doWhatISay(prev, &op)
-				if e != nil { return e }
+				if e != nil {
+					log.Printf("error while replicating [prev]: %s", e)
+					return e
+				}
 			}
 		}
 
@@ -86,12 +99,15 @@ func _doWhatISay(c *client, o *OpLogEntry) error {
 	var n int
 
 	switch {
-	case o.opCode == OP_SET:
-		return c.Set(&o.data, &b)
-	case o.opCode == OP_LIST_APPEND:
-		return c.ListAppend(&o.data, &b)
-	case o.opCode == OP_LIST_REMOVE:
-		return c.ListRemove(&o.data, &n)
+	case o.OpCode == OP_SET:
+		log.Printf("Replicating SET to %s", c.addr)
+		return c.Set(&o.Data, &b)
+	case o.OpCode == OP_LIST_APPEND:
+		log.Printf("Replicating LIST_APPEND to %s", c.addr)
+		return c.ListAppend(&o.Data, &b)
+	case o.OpCode == OP_LIST_REMOVE:
+		log.Printf("Replicating LIST_REMOVE to %s", c.addr)
+		return c.ListRemove(&o.Data, &n)
 	}
 
 	return nil;
