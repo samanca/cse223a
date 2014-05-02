@@ -29,9 +29,8 @@ func (self *Chord1)locate_node(id uint32) uint32{
     var max uint32
     var min uint32
     var r uint32
-    var found bool
-    found=false
-    max=ring[0].hash
+    found:=false
+    max=ring[0].hash//
     min=ring[0].hash
     r=0
     fmt.Printf("Ring size is %d\n",len(ring))
@@ -46,29 +45,34 @@ func (self *Chord1)locate_node(id uint32) uint32{
             }
     }
     if (len(ring)>=2){
+
     for i:=0;i<len(ring);i++{
-        if(max < ring[i].hash){
-            max=ring[i].hash
-            id_max=i
-        }
 
-        if(min > ring[i].hash){
-            min=ring[i].hash
-            id_min=i
-        }
+            if (ring[i].hash > max){
+                id_max=i
+                max=ring[i].hash
+            }
+            if (ring[i].hash<min){
+                id_min=i
+                min=ring[i].hash
+            }
 
-            if (id > ring[i].hash && id < ring[i].end && found==false){
+
+            if (id > ring[i].hash && id < ring[i].end){
                 succ=ring[i].end
                 ring[i].end=id
                 found=true
+                break
             }
           
         }
-          if (id >max || id <min){
+        if (id >max || id <min) && found==false{
                 succ=ring[id_min].hash
                 ring[id_max].end=id
-            }
         }
+
+        }
+    
     
 
   /*          
@@ -91,9 +95,9 @@ func (self *Chord1)locate_node(id uint32) uint32{
              succ=ring[id_min].hash
              r=3
         }
-    */     
-        fmt.Printf("Max :%d,Min :%d,R:%d\n",max,min,r)
-              
+    */   
+        //fmt.Printf("Max :%d,Max_id:%d,Min :%d,Min_id:%d,R:%d\n",ring[self.max_id].hash,self.max_id,ring[self.min_id].hash,self.min_id,r)
+        fmt.Printf("Max_id:%d,Min_id:%d,R:%d\n",max,min,r)              
 return succ
 }
 
@@ -178,6 +182,8 @@ var count1 int = -1
 //comment by vineet
 type Chord1 struct {
 	back_ends[] string
+    max_id int
+    min_id int
 }
 func (self *Chord1) makeRing(){
 for i := range self.back_ends{
