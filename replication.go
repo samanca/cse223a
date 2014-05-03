@@ -78,7 +78,7 @@ func (self *ReplicationService) run() error {
 		}
 
 		// 5 - log replication statistics
-		log.Printf("background replication: %d / %d", succ, len(live_back_ends))
+		//log.Printf("background replication: %d / %d", succ, len(live_back_ends))
 	}
 	return fmt.Errorf("unexcpected behavior in replication service!")
 }

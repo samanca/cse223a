@@ -25,13 +25,18 @@ func (self *BinStorageWrapper) Map(name string) uint32 {
 func (self *BinStorageWrapper) Bin(name string) Storage {
 	var cli *client
 	var ip string
-	id:=self.chord.getHash1(name)
-	_,succ_ip:=self.chord.find_succ(id)	
+	id:=self.chord.getHash1(name) // hash value for name
+	_,succ_ip:=self.chord.find_succ(id)
+	if succ_ip == EMPTY_STRING {
+		log.Printf("succ_ip == EMPTY")
+		return nil
+	}
 	cli=&client{ addr: succ_ip }
     _, err := cli.acquireConnection();
     if(err==nil){
     	ip=succ_ip
     }else{
+		log.Printf("trying to find another successor ...")
     	for{
             succ_ip_val:=self.chord.getHash1(succ_ip)
     		_,succ_ip:=self.chord.find_succ(succ_ip_val)	

@@ -30,11 +30,11 @@ func (self *Chord1) locate_node(id uint32,ip string) (ret_succ uint32,ret_succ_i
     var succ_ip string
     var id_max int
     var id_min int
-    var max uint32
-    var min uint32
+    var max uint32 = 0
+    var min uint32 = 4294967295
     found:=false
-    max=self.ring[0].hash
-    min=self.ring[0].hash
+    //max=self.ring[0].hash
+    //min=self.ring[0].hash
     log.Print("Enter locate node")
    // log.Print(self.ring)
     if (len(self.ring)==1){
@@ -90,7 +90,7 @@ return succ,succ_ip
 
 func (self *Chord1) find_succ(id uint32) (ret_succ uint32,ret_succ_ip string){
     var succ uint32
-    var succ_ip string 
+    var succ_ip string = EMPTY_STRING
     var id_min int
     var max uint32
     var min uint32
@@ -98,11 +98,16 @@ func (self *Chord1) find_succ(id uint32) (ret_succ uint32,ret_succ_ip string){
     //max=self.ring[0].hash
     //min=self.ring[0].hash
     max=0
-    min=0
-    if len(self.ring)==1{
+    min=4294967295
+	log.Printf("Ring size: %d", len(self.ring))
+	if len(self.ring) == 0 {
+		return 0, EMPTY_STRING
+	}
+	if len(self.ring)==1{
         return self.ring[0].hash,self.ring[0].ip
     }
     if len(self.ring)>1{
+		log.Printf("Starting to do sth")
         for i:=0;i<len(self.ring);i++{
 
              if (self.ring[i].hash > max){
@@ -114,18 +119,21 @@ func (self *Chord1) find_succ(id uint32) (ret_succ uint32,ret_succ_ip string){
                 min=self.ring[i].hash
             }
 
-            if id > self.ring[i].hash && id < self.ring[i].next{
+            if id > self.ring[i].hash && id <= self.ring[i].next {
+				log.Printf("[1]")
                 succ= self.ring[i].next
                 succ_ip=self.ring[i].succ_ip
                 found=true
                 break
             }
         }
-           if (id >max || id <min) && found==false{
-                succ=self.ring[id_min].hash
-                succ_ip=self.ring[id_min].ip
-                found=true
-        }
+
+		if (id >max || id <min) && found==false{
+		   log.Printf("[2]")
+			succ=self.ring[id_min].hash
+			succ_ip=self.ring[id_min].ip
+			found=true
+		}
     }
 return succ,succ_ip
 }
