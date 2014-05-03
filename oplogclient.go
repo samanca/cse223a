@@ -34,7 +34,7 @@ func (self *OpLogClient) Get(key string, value *string) error {
 func (self *OpLogClient) log(opCode uint, kv *KeyValue) error {
 	var succ bool
 
-	op := &OpLogEntry{ opCode: opCode, data: *kv }
+	op := &OpLogEntry{ OpCode: opCode, Data: *kv }
 	jsonObj, e := json.Marshal(op)
 	if e != nil {
 		return fmt.Errorf("Error while marshaling the OP Code")
@@ -57,7 +57,11 @@ func (self *OpLogClient) Set(kv *KeyValue, succ *bool) error {
 }
 
 func (self *OpLogClient) Keys(p *Pattern, list *List) error {
-	return self.cli.Keys(p,list);
+	e := self.cli.Keys(p,list);
+	for i := range list.L {
+		list.L[i] = removeNS(list.L[i])
+	}
+	return e
 }
 
 func (self *OpLogClient) ListGet(key string, list *List) error {
@@ -91,7 +95,8 @@ func (self *OpLogClient) ListKeys(p *Pattern, list *List) error {
 	for i := range list.L {
 		if list.L[i] == LOG_KEY {
 			opLogExists = true
-			break
+		} else {
+			list.L[i] = removeNS(list.L[i])
 		}
 	}
 

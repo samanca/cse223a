@@ -80,10 +80,6 @@ func (self *client) Keys(p *Pattern, list *List) error {
 
 	if list.L == nil {
 		list.L = make([]string, 0)
-	} else {
-		for i := range list.L {
-			list.L[i] = removeNS(list.L[i])
-		}
 	}
 
 	return err;
@@ -140,10 +136,6 @@ func (self *client) ListKeys(p *Pattern, list *List) error {
 
 	if list.L == nil {
 		list.L = make([]string, 0)
-	} else {
-		for i := range list.L {
-			list.L[i] = removeNS(list.L[i])
-		}
 	}
 
 	return err;

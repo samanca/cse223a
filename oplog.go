@@ -13,8 +13,8 @@ const (
  * Our OpLog will be a list of encoded OpLogEntries, ordered by Primary Time
  */
 type OpLogEntry struct {
-	opCode uint // OP_SET | OP_LIST_APPEND | OP_LIST_REMOVE
-	data KeyValue
+	OpCode uint `json:"OpCode"` // OP_SET | OP_LIST_APPEND | OP_LIST_REMOVE
+	Data KeyValue `json:"Data"`
 }
 
 // TODO helper functions (e.g. encoder and decoder)
