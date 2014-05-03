@@ -35,55 +35,55 @@ type keeper struct {
 }
 
 //Maintain Node and Ring for the Chord Ring information
-type node struct {
-    ip string //its own ip
-    prev string //prev ip
-    succ string //succ ip
-    start uint32 //start of its arc
-    end uint32 //end of its arc onr ring
+type Node struct {
+    Ip string //its own ip
+    Prev string //prev ip
+    Succ string //succ ip
+    Start uint32 //start of its arc
+    End uint32 //end of its arc onr ring
 }
 
 //Initially there is no node in the ring
-//var ring []node
+//var ring []Node
 
 //create ring with zero nodes
 func (self *Chord) initialize() error{
-    self.ring = make([]node, 0)
+    self.Ring = make([]Node, 0)
     return nil
 }
 
 func (self *Chord) printRing() error{
-    for i := range self.ring{
-        fmt.Printf("%+v",self.ring[i])
+    for i := range self.Ring{
+        fmt.Printf("%+v",self.Ring[i])
     }
     return nil
 }
 
 func (self *Chord) lookupValinRing(val uint32) (string, error){
-    if len(self.ring)==0{
+    if len(self.Ring)==0{
         return "",fmt.Errorf("ring is of size 0 nodes. Cannot find a node.")
     }
-    if len(self.ring)==1{
-        return self.ring[0].ip,nil
+    if len(self.Ring)==1{
+        return self.Ring[0].Ip,nil
     }
-    if len(self.ring)>1{
-        for j:=0;j<len(self.ring);j++{
+    if len(self.Ring)>1{
+        for j:=0;j<len(self.Ring);j++{
             //Normal case, whent he start value is less than the end value
 
-log.Print(val, self.ring[j].start,self.ring[j].end, self.ring[j].ip)
-          if self.ring[j].start < self.ring[j].end {
+log.Print(val, self.Ring[j].Start,self.Ring[j].End, self.Ring[j].Ip)
+          if self.Ring[j].Start < self.Ring[j].End {
        //       log.Print("12")
-            if self.ring[j].start <= val && val <= self.ring[j].end{
+            if self.Ring[j].Start <= val && val <= self.Ring[j].End{
          //       log.Print("23")
-                return self.ring[j].ip, nil
+                return self.Ring[j].Ip, nil
             }
         }
             //else check for the "0" key jumpingmp case i.e. the val is between end and start
-            if (self.ring[j].start > self.ring[j].end){
+            if (self.Ring[j].Start > self.Ring[j].End){
    //             log.Print("11")
-                if((self.ring[j].end >= val && val >= 0) || (self.ring[j].start <= val)){
+                if((self.Ring[j].End >= val && val >= 0) || (self.Ring[j].Start <= val)){
      //               log.Print("22")
-                    return self.ring[j].ip, nil
+                    return self.Ring[j].Ip, nil
                 }
             }
         }
@@ -101,14 +101,14 @@ log.Print("Bin name - ", name)
 func (self *Chord) listAllActiveNodes() ([]string, error){
     list_of_active_nodes:=make([]string,0)
 
-    for i:=0;i<len(self.ring);i++{
-        list_of_active_nodes = append(list_of_active_nodes,self.ring[i].ip)
+    for i:=0;i<len(self.Ring);i++{
+        list_of_active_nodes = append(list_of_active_nodes,self.Ring[i].Ip)
     }
     return list_of_active_nodes,nil
 }
 
 func (self *Chord) addNodetoRing(ip string) (string, string, error){
-    var Node node
+    var node Node
     val := getHash(ip)
 
 /*
@@ -126,67 +126,67 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
     //var next,prev string
 
     //Folowing values are fixed regardless of node location in ring
-    Node.ip = ip
+    node.Ip = ip
 //log.Print("add1")
-    if len(self.ring)==0{
+    if len(self.Ring)==0{
 //log.Print("add2")
-        Node.succ = ""
-        Node.prev = ""
-        Node.start = 0
-        Node.end = MAXHASHVAL
+        node.Succ = ""
+        node.Prev = ""
+        node.Start = 0
+        node.End = MAXHASHVAL
     } //else{
-        if len(self.ring)==1{
+        if len(self.Ring)==1{
 //log.Print("add3")
-            Node.succ=self.ring[0].ip
-            Node.prev=self.ring[0].ip
-            Node.start=getHash(self.ring[0].ip)+1
-            Node.end=val
+            node.Succ=self.Ring[0].Ip
+            node.Prev=self.Ring[0].Ip
+            node.Start=getHash(self.Ring[0].Ip)+1
+            node.End=val
 //log.Print("add4")
 
             //Fix the other node - which is already existing
-            self.ring[0].succ=ip
-            self.ring[0].prev=ip
-            self.ring[0].start=val+1
-            self.ring[0].end=getHash(self.ring[0].ip)
+            self.Ring[0].Succ=ip
+            self.Ring[0].Prev=ip
+            self.Ring[0].Start=val+1
+            self.Ring[0].End=getHash(self.Ring[0].Ip)
 //log.Print("add5")
             //So, now both the nodes are fixed. The initial node covers the "0" key
         }//else{
         //TODO-above. I think len=2 case is handled in loop. Confirm.
         //For rings with 2 nodes or more
-        if len(self.ring)>1{
+        if len(self.Ring)>1{
 
 //log.Print("add6 - ")
-    for i:=0;i<len(self.ring);i++{
-//log.Print("add7 - ", val, self.ring[i].start, self.ring[i].end)
+    for i:=0;i<len(self.Ring);i++{
+//log.Print("add7 - ", val, self.Ring[i].start, self.Ring[i].end)
         //Normal case - when a node's start value is less than end
-      if self.ring[i].start < self.ring[i].end{
+      if self.Ring[i].Start < self.Ring[i].End{
 //log.Print("add8")
-        if (val >= self.ring[i].start && val <= self.ring[i].end){
+        if (val >= self.Ring[i].Start && val <= self.Ring[i].End){
 //log.Print("add9")
-            Node.succ = self.ring[i].ip
-            Node.prev = self.ring[i].prev
-            Node.start = self.ring[i].start
-            Node.end = val
+            node.Succ = self.Ring[i].Ip
+            node.Prev = self.Ring[i].Prev
+            node.Start = self.Ring[i].Start
+            node.End = val
             //Fix the successor node
-            self.ring[i].prev = Node.ip
-            self.ring[i].start = val+1
+            self.Ring[i].Prev = node.Ip
+            self.Ring[i].Start = val+1
             //Fix the predecessor node later - TODO
             break
         }
       }else{
 //log.Print("add10")
           //Special case - jumping over the zero key
-        if self.ring[i].start > self.ring[i].end{
+        if self.Ring[i].Start > self.Ring[i].End{
 //log.Print("add11")
-            if (val <= self.ring[i].end && val >= 0) ||  val >= self.ring[i].start{
+            if (val <= self.Ring[i].End && val >= 0) ||  val >= self.Ring[i].Start{
 //log.Print("add12")
-                Node.succ=self.ring[i].ip
-                Node.prev=self.ring[i].prev
-                Node.start=self.ring[i].start
-                Node.end=val
+                node.Succ=self.Ring[i].Ip
+                node.Prev=self.Ring[i].Prev
+                node.Start=self.Ring[i].Start
+                node.End=val
                 //Fixing the successor
-                self.ring[i].prev=Node.ip
-                self.ring[i].start=val+1
+                self.Ring[i].Prev=node.Ip
+                self.Ring[i].Start=val+1
                 //Fix the predecessor node later - TODO
                 break
         }
@@ -197,35 +197,35 @@ func (self *Chord) addNodetoRing(ip string) (string, string, error){
     }
 //log.Print("add14")
     //Fix the predecessor's arc and prev value
-    for j:=0;j<len(self.ring);j++{
+    for j:=0;j<len(self.Ring);j++{
 //log.Print("add15")
-        if self.ring[j].ip==Node.prev{
+        if self.Ring[j].Ip==node.Prev{
 //log.Print("add16")
-            self.ring[j].succ = Node.ip
+            self.Ring[j].Succ = node.Ip
             break
         }
     }
 }
 //log.Print("add17")
-    self.ring = append(self.ring, Node) //TODO-is this how you use append
+    self.Ring = append(self.Ring, node) //TODO-is this how you use append
 //log.Print("add18")
-    return  Node.succ,Node.prev,nil
+    return  node.Succ,node.Prev,nil
 }
 
 func (self *Chord) removeNodefromRing(ip string) (string, string, error){
 //log.Print("remove1")
-    if len(self.ring)==0{
+    if len(self.Ring)==0{
 //log.Print("remove2")
         return "","",fmt.Errorf("ring already empty, cannot remove node")
     }
 //log.Print("remove3")
-    if len(self.ring)==1{
+    if len(self.Ring)==1{
 //log.Print("remove4")
-        if self.ring[0].ip==ip{
+        if self.Ring[0].Ip==ip{
 //log.Print("remove5")
             //the only node in the ring is the node we want to delete
             //create ring of size 0
-            self.ring = make ([]node, 0)
+            self.Ring = make ([]Node, 0)
 //log.Print("remove6")
             return "","",nil
         }else{
@@ -235,14 +235,14 @@ func (self *Chord) removeNodefromRing(ip string) (string, string, error){
     }
     var ip_used string
 
-    if len(self.ring)==2{
+    if len(self.Ring)==2{
 //log.Print("remove8")
-        if self.ring[0].ip==ip{
-            ip_used=self.ring[1].ip
+        if self.Ring[0].Ip==ip{
+            ip_used=self.Ring[1].Ip
 //log.Print("remove9")
         }else{
-        if self.ring[1].ip==ip{
-            ip_used=self.ring[0].ip
+        if self.Ring[1].Ip==ip{
+            ip_used=self.Ring[0].Ip
 //log.Print("remove10")
         }else{
 //log.Print("remove11")
@@ -251,19 +251,19 @@ func (self *Chord) removeNodefromRing(ip string) (string, string, error){
 
 //log.Print("remove12 - ",)
 //Modify ring to contain only one node
-        self.ring = make([]node,1)
+        self.Ring = make([]Node,1)
 //log.Print("remove121")
-        self.ring[0].succ=""
-        self.ring[0].prev=""
+        self.Ring[0].Succ=""
+        self.Ring[0].Prev=""
 //log.Print("remove122")
-        self.ring[0].ip=ip_used
+        self.Ring[0].Ip=ip_used
 //log.Print("remove122")
-        self.ring[0].start=0
-        self.ring[0].end= MAXHASHVAL
+        self.Ring[0].Start=0
+        self.Ring[0].End= MAXHASHVAL
 
 //log.Print("remove13")
         //above should leave only one node in the ring
-        if len(self.ring)!=1{
+        if len(self.Ring)!=1{
 //log.Print("remove14")
             return "","",fmt.Errorf("ring is not of size 1. Error")
         }
@@ -271,33 +271,33 @@ func (self *Chord) removeNodefromRing(ip string) (string, string, error){
         return "","",nil
     }
 
-    for i:=0;i<len(self.ring);i++{
+    for i:=0;i<len(self.Ring);i++{
 //log.Print("remove20")
-        if ip==self.ring[i].ip{
-			next1:=self.ring[i].succ
-			prev1:=self.ring[i].prev
+        if ip==self.Ring[i].Ip{
+			next1:=self.Ring[i].Succ
+			prev1:=self.Ring[i].Prev
 //log.Print("remove21")
             //we have found our node, need to modify the relevant succ and prev values in ring
             //and remove the node
-            for j:=0;j<len(self.ring);j++{
+            for j:=0;j<len(self.Ring);j++{
 //log.Print("remove22")
             //Fix the successor node
-                if self.ring[j].ip==self.ring[i].succ{
+                if self.Ring[j].Ip==self.Ring[i].Succ{
 //log.Print("remove23")
-                    self.ring[j].prev = self.ring[i].prev
-                    self.ring[j].start = self.ring[i].start
+                    self.Ring[j].Prev = self.Ring[i].Prev
+                    self.Ring[j].Start = self.Ring[i].Start
                 }
             //Fix the predecessor node
 //log.Print("remove24")
-                if self.ring[j].ip==self.ring[i].prev{
+                if self.Ring[j].Ip==self.Ring[i].Prev{
 //log.Print("remove25")
-                    self.ring[j].succ=self.ring[i].succ
+                    self.Ring[j].Succ=self.Ring[i].Succ
                 }
             }
 //log.Print("remove26")
             //Remove the node
 
-            self.ring = append(self.ring[:i],self.ring[i+1:]...)
+            self.Ring = append(self.Ring[:i],self.Ring[i+1:]...)
 //log.Print("remove27")
             return next1,prev1,nil
         }
@@ -354,7 +354,7 @@ func (self *keeper) run() error {
 		}
 	}
 
-//log.Print(chord.ring)
+//log.Print(chord.Ring)
     replication := &ReplicationService{ _chord: &chord }
 
 //log.Print(self.config.Backs)
@@ -413,12 +413,12 @@ func (self *keeper) run() error {
 			var err1 error
 //log.Print(5)
 //vineet
-//log.Print("len of chord.ring=", len(chord.ring))
-//log.Print(chord.ring)
+//log.Print("len of chord.Ring=", len(chord.Ring))
+//log.Print(chord.Ring)
 			next,prev,err1 = chord.addNodetoRing(self.config.Backs[i])
 //vineet
             //log.Print(6)
-//log.Print(chord.ring)
+//log.Print(chord.Ring)
 			if err1!=nil{
 				fmt.Errorf("error in adding node")
 			}
@@ -530,13 +530,13 @@ func (self *keeper) run() error {
 			go replication.notifyLeave(&chordminisnapshot1)
 //log.Print(16)
 //vineet
-//log.Print(chord.ring)
+//log.Print(chord.Ring)
             //Remove node - modify ring
                 var err2 error
                 next,prev,err2 = chord.removeNodefromRing(self.config.Backs[i])
 //log.Print(17,next,prev,self.config.Backs[i])
 //vineet
-//log.Print(chord.ring)
+//log.Print(chord.Ring)
                 if err2!=nil{
 //log.Print(18)
                     fmt.Errorf("Error removing node.")

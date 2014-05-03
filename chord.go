@@ -8,24 +8,24 @@ import "fmt"
 
 //comment by vineet
 type Chord struct {
-    ring []node
+    Ring []Node `json:"ring"`
     //check keeper.go for struct definitions
 }
 
 func (self *Chord) Succ_node_ip(ip string) (string,error){
 
-    if len(self.ring)==0{
+    if len(self.Ring)==0{
         return "",fmt.Errorf("Ring with no nodes. Please check")
     }
 
-    if len(self.ring)==1{
+    if len(self.Ring)==1{
         return "",fmt.Errorf("Ring with 1 node, cant find succ. Please check")
     }
 
-    for i:=0;i<len(self.ring);i++{
-//log.Print("ip and current ip", ip, self.ring[i].ip)
-        if self.ring[i].ip==ip{
-            return self.ring[i].succ,nil
+    for i:=0;i<len(self.Ring);i++{
+//log.Print("ip and current ip", ip, self.Ring[i].ip)
+        if self.Ring[i].Ip==ip{
+            return self.Ring[i].Succ,nil
         }
         //return "",fmt.Errorf("IP not found in ring. Error!")
     }
@@ -33,17 +33,17 @@ func (self *Chord) Succ_node_ip(ip string) (string,error){
 }
 
 func (self *Chord) Prev_node_ip(ip string) (string,error){
-    if len(self.ring)==0{
+    if len(self.Ring)==0{
         return "",fmt.Errorf("Ring with no nodes. Please check")
     }
 
-    if len(self.ring)==1{
+    if len(self.Ring)==1{
         return "",fmt.Errorf("Ring with 1 node, cant find succ. Please check")
     }
 
-    for i:=0;i<len(self.ring);i++{
-        if self.ring[i].ip==ip{
-            return self.ring[i].prev,nil
+    for i:=0;i<len(self.Ring);i++{
+        if self.Ring[i].Ip==ip{
+            return self.Ring[i].Prev,nil
         }
         //return "",fmt.Errorf("IP not found in ring. Error!")
     }
