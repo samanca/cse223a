@@ -43,7 +43,7 @@ func _sync(backend string, replicas []string, chord *Chord) error {
 			 * otherwise, the previous node should be the owner, so I should write it to the previous and next node
 			 */
 
-			// 2.1 - I always have to write the data to the next node
+			// 2.1 - I always have to write the data to the next node (it's either 1st or 2nd replica)
 			e = _doWhatISay(rs[0], &op)
 			if e != nil {
 				log.Printf("error while replicating [0]: %s", e)
@@ -51,11 +51,11 @@ func _sync(backend string, replicas []string, chord *Chord) error {
 			}
 
 			// 2.2 - is it mine?
-			log.Printf("getting bin for %s (%s)", removeNS(op.Data.Key), op.Data.Key)
-			owner, err := chord.getIPbyBinName(removeNS(op.Data.Key))
+			owner, err := chord.getIPbyBinName(extractNS(op.Data.Key))
 			if err != nil {
 				log.Printf("error getting bin name: %s", err)
 			}
+			log.Printf("bin for %s = %s", op.Data.Key, owner)
 
 			if owner == backend {
 
@@ -71,14 +71,16 @@ func _sync(backend string, replicas []string, chord *Chord) error {
 					}
 				//}
 
-			} else {
-
+			} else if owner == prev_ip {
+				log.Printf("WARNING: you wrote the data to the successor!")
 				// 2.3.2 - Write to the real owner
 				e = _doWhatISay(prev, &op)
 				if e != nil {
 					log.Printf("error while replicating [prev]: %s", e)
 					return e
 				}
+			} else {
+				log.Printf("DANGER: you wrote the data to some random place!!!!!!")
 			}
 		}
 
