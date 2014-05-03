@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"errors"
+    "encoding/json"
 )
 
 const (
@@ -314,17 +315,40 @@ func (self *keeper) node_status() error{
 }
 */
 
+func (self *Chord) MarshalChord() ([]byte, error){
+    return json.Marshal(self)
+}
+
 func (self *keeper) run() error {
+//The section below does the wait and read/write chord data.
+//The actual keeper starts at "Tag:2"
+    cokeep := &CoKeeper{config:self.config}
+    cokeep.init()
+
+    keep_sync_chan := make(chan bool,1)
+    go cokeep.run(&keep_sync_chan)
+    <-keep_sync_chan
+
+    bytechord1,err01:=cokeep.GetMostUpdatedChord()
+    if err01!=nil{
+        log.Print("keeper.go - error in GetMostUpdatedChord")
+        return fmt.Errorf("keeper.go - Error in GetMostUpdatedChord")
+    }
+
+    //Tag:2 - BEYOND THIS LINE RUNS THE KEEPER - YOU HAVE BEEN WARNED
+
     //keeps a count mod 3. Everytime it is 0, we call the Clock().
     //When it is 0,1, or 2, we do the node join/crash check
     var count int = -1
-//Table maintained by Keeper for all the nodes
-//TODO-300 is static. Can we maintain this table dynamic while sharing it between keepers
-var node_status []bool = make ([]bool,300)
+    //Table maintained by Keeper for all the nodes
+    //TODO-300 is static. Can we maintain this table dynamic while sharing it between keepers
+    var node_status []bool = make ([]bool,300)
 
 	// initialize
     var chord Chord
     chord.initialize()
+    json.Unmarshal(bytechord1,&chord)
+
 //log.Print(chord.ring)
     replication := &ReplicationService{ _chord: &chord }
 
@@ -398,6 +422,14 @@ var node_status []bool = make ([]bool,300)
                 fmt.Errorf("chordminisnapshot network error. check.")
             }
 //log.Print(7)
+        bytechord,err10:=chord.MarshalChord()
+        if err10!=nil{
+            log.Print("Error in marshaling chord")
+        }
+        err31:=cokeep.UpdateChord(bytechord)
+        if err31!=nil{
+            log.Print("Error in sending update chord")
+        }
 			go replication.notifyJoin(&chordminisnapshot)
 //log.Print(8)
             //add successor/previous keys on the corresponding nodes
