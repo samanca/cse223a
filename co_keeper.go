@@ -58,6 +58,7 @@ func (self *CoKeeper) run(ch *chan bool) {
 	for {
 
 		var primaryObserved bool = false
+		var anyOtherAlive bool = false
 
 		// rest for a while
 		time.Sleep(1 * time.Second)
@@ -79,6 +80,8 @@ func (self *CoKeeper) run(ch *chan bool) {
 				log.Printf("unable to read STATE from %s", self._conns[i].addr)
 				continue
 			}
+
+			anyOtherAlive = true
 			if tempState == STATE_PRIMARY { primaryObserved = true }
 
 			log.Printf("%s got CHORD from %s", self._myAddress, self._conns[i].addr)
@@ -90,7 +93,7 @@ func (self *CoKeeper) run(ch *chan bool) {
 		}
 
 		// decide about the future!
-		if !primaryObserved && maxObservedAddress != EMPTY_STRING && self._myAddress > maxObservedAddress {
+		if !anyOtherAlive || (!primaryObserved && maxObservedAddress != EMPTY_STRING && self._myAddress > maxObservedAddress) {
 			if self.updateMyState(STATE_PRIMARY) == nil { break }
 		} else {
 			log.Printf("%s does not own the maximum IP!", self._myAddress)
