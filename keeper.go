@@ -69,7 +69,7 @@ func (self *Chord) lookupValinRing(val uint32) (string, error){
         for j:=0;j<len(self.ring);j++{
             //Normal case, whent he start value is less than the end value
 
-log.Print(val,  self.ring[j].start,  self.ring[j].end)
+log.Print(val, self.ring[j].start,self.ring[j].end, self.ring[j].ip)
           if self.ring[j].start < self.ring[j].end {
        //       log.Print("12")
             if self.ring[j].start <= val && val <= self.ring[j].end{
@@ -93,6 +93,7 @@ log.Print(val,  self.ring[j].start,  self.ring[j].end)
 
 func (self *Chord) getIPbyBinName(name string) (string,error){
     val := getHash(name)
+log.Print("Bin name" - name)
     return self.lookupValinRing(val)
 }
 
