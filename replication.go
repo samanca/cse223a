@@ -1,7 +1,7 @@
 package triblab
 import . "trib"
 import "fmt"
-import "log"
+//import "log"
 import "time"
 
 const (
@@ -34,7 +34,7 @@ func (self *ReplicationService) run() error {
 		// 1 - list of active back-ends
 		live_back_ends, err := self._chord.listAllActiveNodes()
 		if err != nil {
-			log.Printf("unable to get the list of active nodes: %s", err)
+			//log.Printf("unable to get the list of active nodes: %s", err)
 			continue
 		}
 		/*
@@ -53,14 +53,14 @@ func (self *ReplicationService) run() error {
 
 			replicas[0], e = self._chord.Succ_node_ip(live_back_ends[i])
 			if e != nil {
-				log.Printf("error while getting next: %s", e)
+				//log.Printf("error while getting next: %s", e)
 				c<-false; continue
 			}
 			//log.Printf("next for %s is %s", live_back_ends[i], replicas[0])
 
 			replicas[1], e = self._chord.Succ_node_ip(replicas[0])
 			if e != nil {
-				log.Printf("error while getting next_next: %s", e)
+				//log.Printf("error while getting next_next: %s", e)
 				c<-false; continue
 			}
 			//log.Printf("next_next for %s is %s", live_back_ends[i], replicas[1])
@@ -148,7 +148,7 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 		// filter
 		primary_copy, e := self._chord.getIPbyBinName(extractNS(keys.L[i]))
 		if e !=  nil {
-			log.Printf("error mapping user to bin: %s", e)
+			//log.Printf("error mapping user to bin: %s", e)
 			continue
 		}
 		if primary_copy != reference {
@@ -183,7 +183,7 @@ func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference s
 	lists, err := getAllKeys(s_conn, true)
 	if err != nil { *c<-false; return }
 
-	log.Printf("cpLists for %s of size %d from %s to %s", reference, len(lists.L), source, dest)
+	//log.Printf("cpLists for %s of size %d from %s to %s", reference, len(lists.L), source, dest)
 
 	anyFailure = false
 	for i := range lists.L {
@@ -191,11 +191,11 @@ func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference s
 		// filter
 		primary_copy, e := self._chord.getIPbyBinName(extractNS(lists.L[i]))
 		if e !=  nil {
-			log.Printf("error mapping user to bin: %s", e)
+			//log.Printf("error mapping user to bin: %s", e)
 			continue
 		}
 
-		log.Printf("primary_copy = %s (%s)", primary_copy, lists.L[i])
+		//log.Printf("primary_copy = %s (%s)", primary_copy, lists.L[i])
 
 		if primary_copy != reference {
 			if self.isRedundant(lists.L[i], source) {
@@ -247,14 +247,14 @@ func (self *ReplicationService) replicateThrough(c *chan bool, source, dest, tp 
 func (self *ReplicationService) notifyJoin(chord *ChordMiniSnapshot) error {
 
 	if chord.ofSizeOne() {
-		log.Printf("notifyJoin for |chord| = 1")
+		//log.Printf("notifyJoin for |chord| = 1")
 		return nil // nothing to do as |Chord| < 2
 	}
 
 	// init channel
 	c := make(chan bool, 3)
 
-	log.Printf("starting background replicaiton for join ...")
+	//log.Printf("starting background replicaiton for join ...")
 
 	go self.replicateThrough(&c, chord.me, chord.me, chord.next)
 	go self.replicate(&c, chord.prev, chord.me)
@@ -270,7 +270,7 @@ func (self *ReplicationService) notifyJoin(chord *ChordMiniSnapshot) error {
 		if (<-c) { succ++ }
 	}
 
-	log.Printf("finished with background replicaiton for join ...")
+	//log.Printf("finished with background replicaiton for join ...")
 
 	// report garbage
 	if !chord.smallerThanFour() {

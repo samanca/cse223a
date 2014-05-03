@@ -36,7 +36,7 @@ func (self *BinStorageWrapper) Bin(name string) Storage {
     _, succ_ip := self.chord.find_succ(id) // it should be the owner
 
     if succ_ip == EMPTY_STRING {
-        log.Printf("succ_ip == EMPTY")
+        //log.Printf("succ_ip == EMPTY")
         return nil
     }
 
@@ -47,14 +47,14 @@ func (self *BinStorageWrapper) Bin(name string) Storage {
         c1.Close()
     } else {
         if LogEnabled {
-            log.Printf("trying to find another successor ...")
+            //log.Printf("trying to find another successor ...")
         }
 
         succ_ip_val := self.chord.getHash1(succ_ip) + 1
         _, succ_ip := self.chord.find_succ(succ_ip_val) // the successor should be able to respond
 
         if succ_ip == EMPTY_STRING {
-            log.Printf("succ_ip is empty string in Bin(%s)", name)
+            //log.Printf("succ_ip is empty string in Bin(%s)", name)
         }
 
         cli = &client{addr: succ_ip}
@@ -64,7 +64,7 @@ func (self *BinStorageWrapper) Bin(name string) Storage {
             ip = succ_ip
             c2.Close()
         } else {
-            log.Printf("DANGER: two consecutive nodes are down!!!!")
+            //log.Printf("DANGER: two consecutive nodes are down!!!!")
             return nil
         }
     }
@@ -72,7 +72,7 @@ func (self *BinStorageWrapper) Bin(name string) Storage {
     final_cli := &OpLogClient{addr: ip, ns: name}
     final_cli.init()
 
-    log.Printf("Connected to %s", ip)
+    //log.Printf("Connected to %s", ip)
 
     return final_cli
 }
@@ -180,11 +180,11 @@ func (self *BinStorageWrapper) updateRing() {
                 err2 := cli.Get("PREV", &prev)
 
                 if err1 != nil {
-                    log.Print("Error with Get NEXT", self.chord.ring[i].ip)
+                    //log.Print("Error with Get NEXT", self.chord.ring[i].ip)
                     //log.Print("Error while getting Next")
                 }
                 if err2 != nil {
-                    log.Print("Error with Get PREV", self.chord.ring[i].ip)
+                    //log.Print("Error with Get PREV", self.chord.ring[i].ip)
                     //log.Print("Error while getting PREV")
                 }
               //  log.Print("123")
@@ -201,7 +201,7 @@ func (self *BinStorageWrapper) updateRing() {
                 if self.chord.ring[i].prev != prev_val {
                     //log.Print("In updateRing(). The previous values are not matching. This shoulld NEVER happen!!. CORRECT THIS!")
 					self.chord.ring[i].prev = prev_val
-					log.Print("Srtting prev value in update_node. This is wrong.")
+					//log.Print("Srtting prev value in update_node. This is wrong.")
 				}
                 //log.Print("111100012")
 
@@ -217,7 +217,7 @@ func (self *BinStorageWrapper) updateRing() {
                             //This means that the node "self.chord.ring[i].next" has been removed from the ring
                             to_remove_hash = self.chord.ring[i].succ_ip
                             if to_remove_hash == EMPTY_STRING {
-                                log.Print("You suck!")
+                                //log.Print("You suck!")
                             }
                             status = 1
                             break
@@ -252,7 +252,7 @@ func (self *BinStorageWrapper) updateRing() {
                 err12 := cli.Get("NEXT", &next22)
                 err22 := cli.Get("PREV", &prev22)
                 if err12 != nil || err22 != nil {
-                    log.Print("BOOHOOHOOHOHOHOHOHOH")
+                    //log.Print("BOOHOOHOOHOHOHOHOHOH")
                 }
             }
 
@@ -277,7 +277,7 @@ func (self *BinStorageWrapper) updateRing() {
 func (self *BinStorageWrapper) printRing() {
     //log.Print("Print the ring")
     //log.Print("Size of the ring PrintLog")
-    log.Print("size of ring ", len(self.chord.ring))
+    //log.Print("size of ring ", len(self.chord.ring))
     for i := range self.chord.ring {
         fmt.Printf("%d--%d--%d--%s--%s\n", self.chord.ring[i].hash, self.chord.ring[i].prev, self.chord.ring[i].next, self.chord.ring[i].ip, self.chord.ring[i].succ_ip)
     }

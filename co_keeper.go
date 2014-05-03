@@ -2,7 +2,7 @@ package triblab
 import . "trib"
 import "time"
 import "fmt"
-import "log"
+//import "log"
 import "trib/store"
 
 const (
@@ -71,13 +71,13 @@ func (self *CoKeeper) run(ch *chan bool) {
 			// pull chord
 			err := self._conns[i].Get(CHORD_STORE_KEY, &tempChordObj)
 			if err != nil { // probably the other keeper is down
-				log.Printf("unable to read CHORD from %s", self._conns[i].addr)
+				//log.Printf("unable to read CHORD from %s", self._conns[i].addr)
 				continue
 			}
 
 			err = self._conns[i].Get(CK_STATE_KEY, &tempState)
 			if err != nil { // probably the other keeper is down
-				log.Printf("unable to read STATE from %s", self._conns[i].addr)
+				//log.Printf("unable to read STATE from %s", self._conns[i].addr)
 				continue
 			}
 
@@ -87,7 +87,7 @@ func (self *CoKeeper) run(ch *chan bool) {
 				maxChordObj = tempChordObj
 			}
 
-			log.Printf("Got CHORD from %s", self._conns[i].addr)
+			//log.Printf("Got CHORD from %s", self._conns[i].addr)
 
 			if !primaryObserved && self.config.Addrs[i] > maxObservedAddress {
 				maxObservedAddress = self.config.Addrs[i]
@@ -103,12 +103,12 @@ func (self *CoKeeper) run(ch *chan bool) {
 			var success bool
 			kv := KeyValue{ Key: CHORD_STORE_KEY, Value: maxChordObj }
 			er := self._store.Set(&kv, &success)
-			if er != nil { log.Printf("unable to update local CHORD: %s", er) }
-			if er == nil && !success { log.Printf("unable to update local CHORD!") }
+			if er != nil { /*log.Printf("unable to update local CHORD: %s", er)*/ }
+			if er == nil && !success { /*log.Printf("unable to update local CHORD!")*/ }
 		}
 	}
 
-	log.Printf("<%s> is the PRIMARY from now on ...", self._myAddress)
+	//log.Printf("<%s> is the PRIMARY from now on ...", self._myAddress)
 	*ch <- true // I am the PRIMARY from now on
 }
 

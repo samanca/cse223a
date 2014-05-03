@@ -3,7 +3,7 @@ import (
 	. "trib"
 	"time"
 	"fmt"
-	"log"
+//	"log"
 	"errors"
     "encoding/json"
 )
@@ -70,7 +70,7 @@ func (self *Chord) lookupValinRing(val uint32) (string, error){
         for j:=0;j<len(self.Ring);j++{
             //Normal case, whent he start value is less than the end value
 
-log.Print(val, self.Ring[j].Start,self.Ring[j].End, self.Ring[j].Ip)
+//log.Print(val, self.Ring[j].Start,self.Ring[j].End, self.Ring[j].Ip)
           if self.Ring[j].Start < self.Ring[j].End {
        //       log.Print("12")
             if self.Ring[j].Start <= val && val <= self.Ring[j].End{
@@ -88,13 +88,13 @@ log.Print(val, self.Ring[j].Start,self.Ring[j].End, self.Ring[j].Ip)
             }
         }
     }
-    log.Print(":O")
+    //log.Print(":O")
     return "", fmt.Errorf("should never reach here. Check function")
 }
 
 func (self *Chord) getIPbyBinName(name string) (string,error){
     val := getHash(name)
-log.Print("Bin name - ", name)
+//log.Print("Bin name - ", name)
     return self.lookupValinRing(val)
 }
 
@@ -322,7 +322,7 @@ func (self *Chord) MarshalChord() ([]byte, error){
 func (self *keeper) run() error {
 //The section below does the wait and read/write chord data.
 //The actual keeper starts at "Tag:2"
-	log.Print("starting keeper ...")
+	//log.Print("starting keeper ...")
     cokeep := &CoKeeper{config:self.config}
     cokeep.init()
 
@@ -332,7 +332,7 @@ func (self *keeper) run() error {
 
     bytechord1,err01:=cokeep.GetMostUpdatedChord()
     if err01!=nil{
-        log.Print("keeper.go - error in GetMostUpdatedChord")
+        //log.Print("keeper.go - error in GetMostUpdatedChord")
         //return fmt.Errorf("keeper.go - Error in GetMostUpdatedChord")
     }
 
@@ -350,7 +350,7 @@ func (self *keeper) run() error {
     chord.initialize()
 	if err01!=fmt.Errorf("empty chord"){
 		if json.Unmarshal(bytechord1, &chord) != nil {
-			log.Print("unable to unmarshal received CHORD!")
+			//log.Print("unable to unmarshal received CHORD!")
 		}
 	}
 
@@ -387,7 +387,8 @@ func (self *keeper) run() error {
         //If you are able to do above "Set" operation, then the node is updating
 //log.Print(3)
         if err_node_status!=nil{
-            log.Print("not up - ",self.config.Backs[i])}
+            //log.Print("not up - ",self.config.Backs[i])
+		}
 
         if err_node_status==nil{
          if(succ==true){
@@ -429,11 +430,11 @@ func (self *keeper) run() error {
 //log.Print(7)
         bytechord,err10:=chord.MarshalChord()
         if err10!=nil{
-            log.Print("Error in marshaling chord")
+            //log.Print("Error in marshaling chord")
         }
         err31:=cokeep.UpdateChord(bytechord)
         if err31!=nil{
-            log.Print("Error in sending update chord")
+            //log.Print("Error in sending update chord")
         }
 			go replication.notifyJoin(&chordminisnapshot)
 //log.Print(8)
@@ -521,11 +522,11 @@ func (self *keeper) run() error {
             }
         bytechord12,err102:=chord.MarshalChord()
         if err102!=nil{
-            log.Print("Error in marshaling chord")
+            //log.Print("Error in marshaling chord")
         }
         err34:=cokeep.UpdateChord(bytechord12)
         if err34!=nil{
-            log.Print("Error in sending update chord")
+            //log.Print("Error in sending update chord")
         }
 			go replication.notifyLeave(&chordminisnapshot1)
 //log.Print(16)
@@ -583,7 +584,7 @@ func (self *keeper) run() error {
 				self.workers[i].status = ALIVE
 			} else {
 				// Print log message
-				log.Printf("Error reading from %s\n", self.workers[i])
+				//log.Printf("Error reading from %s\n", self.workers[i])
 
 				if self.workers[i].status != DEAD {
 					// Mark worker as SILENT
@@ -601,17 +602,17 @@ func (self *keeper) run() error {
 			if self.workers[i].status == ALIVE {
 				if self.workers[i].lastAck < maxClock {
 					// Sync clock with maxClock
-					log.Printf("Shifting clock from %d to %d for %s\n", self.workers[i].lastAck, maxClock, self.workers[i].address)
+					//log.Printf("Shifting clock from %d to %d for %s\n", self.workers[i].lastAck, maxClock, self.workers[i].address)
 					err := self.workers[i].handler.Clock(maxClock, &self.workers[i].lastAck)
 					if err != nil {
 						// Print log message
-						log.Printf("Error updating clock for %s\n", self.workers[i])
+						//log.Printf("Error updating clock for %s\n", self.workers[i])
 					}
 				}
 			} else {
 				if (self.workers[i].status == SILENT && self.workers[i].silentDur == 10) {
 					self.workers[i].status = DEAD
-					log.Printf("Potential failure of %s detected\n", self.workers[i].address)
+					//log.Printf("Potential failure of %s detected\n", self.workers[i].address)
 				}
 			}
 		}

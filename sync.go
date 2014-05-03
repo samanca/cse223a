@@ -1,7 +1,7 @@
 package triblab
 import . "trib"
 import "encoding/json"
-import "log"
+//import "log"
 
 func Sync(backend string, replicas []string, chord *Chord, c *chan bool) {
 	e := _sync(backend, replicas, chord)
@@ -46,16 +46,16 @@ func _sync(backend string, replicas []string, chord *Chord) error {
 			// 2.1 - I always have to write the data to the next node (it's either 1st or 2nd replica)
 			e = _doWhatISay(rs[0], &op)
 			if e != nil {
-				log.Printf("error while replicating [0]: %s", e)
+				//log.Printf("error while replicating [0]: %s", e)
 				return e
 			}
 
 			// 2.2 - is it mine?
 			owner, err := chord.getIPbyBinName(extractNS(op.Data.Key))
 			if err != nil {
-				log.Printf("error getting bin name: %s", err)
+				//log.Printf("error getting bin name: %s", err)
 			}
-			log.Printf("bin for %s = %s", op.Data.Key, owner)
+			//log.Printf("bin for %s = %s", op.Data.Key, owner)
 
 			if owner == backend {
 
@@ -66,21 +66,21 @@ func _sync(backend string, replicas []string, chord *Chord) error {
 				//if (replicas[1] != backend) {
 					e = _doWhatISay(rs[1], &op)
 					if e != nil {
-						log.Printf("error while replicating [1]: %s", e)
+						//log.Printf("error while replicating [1]: %s", e)
 						return e
 					}
 				//}
 
 			} else if owner == prev_ip {
-				log.Printf("WARNING: you wrote the data to the successor!")
+				//log.Printf("WARNING: you wrote the data to the successor!")
 				// 2.3.2 - Write to the real owner
 				e = _doWhatISay(prev, &op)
 				if e != nil {
-					log.Printf("error while replicating [prev]: %s", e)
+					//log.Printf("error while replicating [prev]: %s", e)
 					return e
 				}
 			} else {
-				log.Printf("DANGER: you wrote the data to some random place!!!!!!")
+				//log.Printf("DANGER: you wrote the data to some random place!!!!!!")
 			}
 		}
 
@@ -102,13 +102,13 @@ func _doWhatISay(c *client, o *OpLogEntry) error {
 
 	switch {
 	case o.OpCode == OP_SET:
-		log.Printf("Replicating SET to %s", c.addr)
+		//log.Printf("Replicating SET to %s", c.addr)
 		return c.Set(&o.Data, &b)
 	case o.OpCode == OP_LIST_APPEND:
-		log.Printf("Replicating LIST_APPEND to %s", c.addr)
+		//log.Printf("Replicating LIST_APPEND to %s", c.addr)
 		return c.ListAppend(&o.Data, &b)
 	case o.OpCode == OP_LIST_REMOVE:
-		log.Printf("Replicating LIST_REMOVE to %s", c.addr)
+		//log.Printf("Replicating LIST_REMOVE to %s", c.addr)
 		return c.ListRemove(&o.Data, &n)
 	}
 

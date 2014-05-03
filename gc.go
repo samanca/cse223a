@@ -111,13 +111,13 @@ func (self *GarbageCollector) run() {
 	for {
 		// sleep
 		time.Sleep(5 * time.Second)
-		log.Printf("GC woke up ...")
+		//log.Printf("GC woke up ...")
 
 		var keys List
 		p := Pattern{ Prefix: "", Suffix: "" }
 		err := self.trashCan.ListKeys(&p, &keys)
 		if err != nil {
-			log.Printf("GC error [1]: %s", err)
+			//log.Printf("GC error [1]: %s", err)
 			continue
 		}
 
@@ -136,13 +136,13 @@ func (self *GarbageCollector) run() {
 
 		// wait for workers
 		for i := 0; i < len(keys.L); i++ { <-ch }
-		log.Printf("GC went to sleep ...")
+		//log.Printf("GC went to sleep ...")
 	}
 }
 
 func (self *GarbageCollector) mark(backend string, gb *Garbage) {
 	var succ bool
-	log.Printf("%s - [%s]", gb, backend)
+	//log.Printf("%s - [%s]", gb, backend)
 	jso, _ := json.Marshal(gb)
 
 	// TODO avoid duplication

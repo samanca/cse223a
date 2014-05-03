@@ -35,16 +35,16 @@ func (self *Chord1) locate_node(id uint32, ip string) (ret_succ uint32, ret_succ
     found := false
     //max=self.ring[0].hash
     //min=self.ring[0].hash
-    log.Print("Enter locate node")
-    log.Print(self.ring)
+    //log.Print("Enter locate node")
+    //log.Print(self.ring)
 
     if len(self.ring) == 0 {
-        log.Printf("empty succ_ip, ring is zero nodes in locate_node")
+        //log.Printf("empty succ_ip, ring is zero nodes in locate_node")
         return 0, EMPTY_STRING
     }
 
     if len(self.ring) == 1 {
-        log.Printf("[1]")
+        //log.Printf("[1]")
         if self.ring[0].hash > id {
             succ = self.ring[0].hash
             succ_ip = self.ring[0].ip
@@ -60,7 +60,7 @@ func (self *Chord1) locate_node(id uint32, ip string) (ret_succ uint32, ret_succ
     }
 
     if len(self.ring) >= 2 {
-        log.Printf("[2]")
+        //log.Printf("[2]")
 
         for i := 0; i < len(self.ring); i++ {
 
@@ -74,7 +74,7 @@ func (self *Chord1) locate_node(id uint32, ip string) (ret_succ uint32, ret_succ
             }
 
             if id > self.ring[i].hash && id < self.ring[i].next {
-                log.Printf("[21]")
+                //log.Printf("[21]")
                 succ = self.ring[i].next
                 succ_ip = self.ring[i].succ_ip
                 self.ring[i].next = id
@@ -85,7 +85,7 @@ func (self *Chord1) locate_node(id uint32, ip string) (ret_succ uint32, ret_succ
 
         }
         if (id > max || id < min) && found == false {
-            log.Printf("[22]")
+            //log.Printf("[22]")
             succ = self.ring[id_min].hash
             succ_ip = self.ring[id_min].ip
             self.ring[id_max].next = id
@@ -93,7 +93,7 @@ func (self *Chord1) locate_node(id uint32, ip string) (ret_succ uint32, ret_succ
         }
 
     }
-    log.Print("Exit locate node")
+    //log.Print("Exit locate node")
     return succ, succ_ip
 }
 
@@ -109,7 +109,7 @@ func (self *Chord1) find_succ(id uint32) (ret_succ uint32, ret_succ_ip string) {
         log.Printf("Ring size: %d", len(self.ring))
     }
     if len(self.ring) == 0 {
-        log.Printf("IN ring of size 0. !!!! IN ind_succ")
+        //log.Printf("IN ring of size 0. !!!! IN ind_succ")
         return 0, EMPTY_STRING
     }
     if len(self.ring) == 1 {
@@ -199,7 +199,7 @@ func (self *Chord1) removeNode(ip string) error {
     var ip_used string
     val := self.getHash1(ip)
     deleted := false
-    log.Print("Entering remove node")
+    //log.Print("Entering remove node")
     if len(self.ring) == 0 {
         fmt.Printf("No nodes to delete\n")
     } else if len(self.ring) == 1 {
@@ -231,13 +231,13 @@ func (self *Chord1) removeNode(ip string) error {
                     if self.ring[j].hash == self.ring[i].next {
                         self.ring[j].prev = self.ring[i].prev
                         self.ring[j].prev_ip = self.ring[i].prev_ip
-                        log.Print(self.ring[j].ip, "Setting prev of ", self.ring[j].prev_ip, "-", self.ring[i].prev_ip)
+                        //log.Print(self.ring[j].ip, "Setting prev of ", self.ring[j].prev_ip, "-", self.ring[i].prev_ip)
 
                     }
                     if self.ring[j].hash == self.ring[i].prev {
                         self.ring[j].next = self.ring[i].next
                         self.ring[j].succ_ip = self.ring[i].succ_ip
-                        log.Print(self.ring[j].ip, "Setting next of ", self.ring[j].succ_ip, "-", self.ring[i].succ_ip)
+                        //log.Print(self.ring[j].ip, "Setting next of ", self.ring[j].succ_ip, "-", self.ring[i].succ_ip)
                     }
                 }
                 self.ring = append(self.ring[:i], self.ring[i+1:]...)

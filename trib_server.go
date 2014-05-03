@@ -1,7 +1,7 @@
 package triblab
 import . "trib"
 import "sync"
-import "log"
+//import "log"
 import "fmt"
 import "time"
 import "encoding/json"
@@ -119,7 +119,7 @@ func (self *TServer) userExists(user string) bool {
 	b := self.acquireBin(USERS)
 	e := b.Get(userKey(user), &v)
 	if e != nil {
-		log.Printf("Error while looking for user %s: %s\n", user, e)
+		//log.Printf("Error while looking for user %s: %s\n", user, e)
 		return true;
 	}
 	return !isEmpty(v)
@@ -129,7 +129,7 @@ func (self *TServer) getUsers() []string {
 	users := new(List)
 	e := self.userList(users)
 	if e != nil {
-		log.Printf("Error while trying to get the list of users: %s\n", e)
+		//log.Printf("Error while trying to get the list of users: %s\n", e)
 		return nil
 	}
 	return users.L
