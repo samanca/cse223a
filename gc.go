@@ -12,8 +12,8 @@ const (
 )
 
 type Garbage struct {
-	Key		string
-	Type	uint
+	Key		string	`json:"Key"`
+	Type	uint	`json:"Type"`
 }
 
 func (self *Garbage) String() string {
