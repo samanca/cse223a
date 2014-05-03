@@ -128,10 +128,12 @@ func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference s
 
 	s_conn := &client{ addr: source }
 	d_conn := &client{ addr: dest }
-	p := &Pattern{ Prefix: "*", Suffix: "*" }
+	p := &Pattern{ Prefix: "", Suffix: "" }
 
 	err = s_conn.ListKeys(p, &lists)
 	if err != nil { *c<-false; return }
+
+	log.Printf("cpLists for %s of size %d from %s to %s", reference, len(lists.L), source, dest)
 
 	anyFailure = false
 	for i := range lists.L {
@@ -142,6 +144,9 @@ func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference s
 			log.Printf("error mapping user to bin: %s", e)
 			continue
 		}
+
+		log.Printf("primary_copy = %s (%s)", primary_copy, lists.L[i])
+
 		if primary_copy != reference {
 			continue // TODO mark it for garbage collection if it's not a replica
 		}
@@ -169,9 +174,7 @@ func (self *ReplicationService) replicate(c *chan bool, source, dest string) {
  */
 func (self *ReplicationService) replicateThrough(c *chan bool, source, dest, tp string) {
 
-	channel := make(chan bool)
-
-	// TODO lock
+	channel := make(chan bool, 2)
 
 	// concurrent copy
 	go self._cpValues(&channel, tp, dest, source)
@@ -182,9 +185,6 @@ func (self *ReplicationService) replicateThrough(c *chan bool, source, dest, tp 
 	if (<-channel) { succ++ }
 	if (<-channel) { succ++ }
 
-	// TODO unlock
-
-	// TODO
 	*c<-(succ == 2)
 }
 
@@ -192,18 +192,21 @@ func (self *ReplicationService) replicateThrough(c *chan bool, source, dest, tp 
 func (self *ReplicationService) notifyJoin(chord *ChordMiniSnapshot) error {
 
 	if chord.ofSizeOne() {
+		log.Printf("notifyJoin for |chord| = 1")
 		return nil // nothing to do as |Chord| < 2
 	}
 
 	// init channel
-	c := make(chan bool)
+	c := make(chan bool, 3)
+
+	log.Printf("starting background replicaiton for join ...")
 
 	go self.replicateThrough(&c, chord.me, chord.me, chord.next)
 	go self.replicate(&c, chord.prev, chord.me)
-	if chord.prev_prev != chord.prev {
-		go self.replicate(&c, chord.prev_prev, chord.me)
-	} else {
+	if chord.ofSizeTwo() {
 		c<-true
+	} else {
+		go self.replicate(&c, chord.prev_prev, chord.me)
 	}
 
 	// wait for join
@@ -211,6 +214,8 @@ func (self *ReplicationService) notifyJoin(chord *ChordMiniSnapshot) error {
 	for i := 0; i < 3; i++ {
 		if (<-c) { succ++ }
 	}
+
+	log.Printf("finished with background replicaiton for join ...")
 
 	// report garbage
 	// TODO
@@ -231,7 +236,7 @@ func (self *ReplicationService) notifyLeave(chord *ChordMiniSnapshot) error {
 	}
 
 	// init channel
-	c := make(chan bool)
+	c := make(chan bool, 3)
 
 	// parallel replication
 	go self.replicateThrough(&c, chord.me, chord.next_next_next, chord.next)
