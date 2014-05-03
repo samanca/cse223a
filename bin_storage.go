@@ -199,8 +199,10 @@ func (self *BinStorageWrapper) updateRing() {
                 //log.Print("12")
                 //Basically this previous check should never happen
                 if self.chord.ring[i].prev != prev_val {
-                    log.Print("In updateRing(). The previous values are not matching. This shoulld NEVER happen!!. CORRECT THIS!")
-                }
+                    //log.Print("In updateRing(). The previous values are not matching. This shoulld NEVER happen!!. CORRECT THIS!")
+					self.chord.ring[i].prev = prev_val
+					log.Print("Srtting prev value in update_node. This is wrong.")
+				}
                 //log.Print("111100012")
 
                 if self.chord.ring[i].next != next_val {
