@@ -1,7 +1,7 @@
 package triblab
 //import "trib"
 import "hash/crc32"
-//import "log"
+import "log"
 import "fmt"
 //Maintain node1 and Ring for the Chord1 Ring information
 type node1 struct {
@@ -93,9 +93,10 @@ func (self *Chord1) find_succ(id uint32) (ret_succ uint32,ret_succ_ip string){
     var max uint32
     var min uint32
     found:=false
-    max=self.ring[0].hash
-    min=self.ring[0].hash
-
+    //max=self.ring[0].hash
+    //min=self.ring[0].hash
+    max=0
+    min=0
     if len(self.ring)==1{
         return self.ring[0].hash,self.ring[0].ip
     }
@@ -143,9 +144,7 @@ func (self *Chord1) addNode(ip string){
     Node.next,Node.succ_ip=self.locate_node(val,ip)
     }
     self.ring = append(self.ring,Node)
-    for i:=0;i<len(self.ring);i++{
-    fmt.Printf("Node value:%d,Node Succ:%d\n",self.ring[i].hash,self.ring[i].next)
-    }
+   
 }
 
 
@@ -200,8 +199,11 @@ func (self *Chord1) removeNode(ip string) (error){
     }    
 }
 
+func (self *Chord1) printRing() {
 
-
-
+    for i:= range self.ring {
+        log.Printf("%d--%d--%d--%s--%s",self.ring[i].hash,self.ring[i].prev,self.ring[i].next,self.ring[i].ip,self.ring[i].succ_ip)
+    }
+}
 
 

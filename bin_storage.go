@@ -46,6 +46,7 @@ func (self BinStorageWrapper) Bin(name string) Storage {
     
 	final_cli := &OpLogClient{ addr: ip, ns: name }
 	final_cli.init()
+    
 	return final_cli
 }
 

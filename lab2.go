@@ -8,7 +8,8 @@ func NewBinClient(backs []string) BinStorage {
 	BinS:=BinStorageWrapper{ back_ends: backs }
 	BinS.bootStrapRing()
 	BinS.fixPreviousPointer()
-	go BinS.updateRing()
+	BinS.chord.printRing()
+//	go BinS.updateRing()
 	return BinS
 }
 
