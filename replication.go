@@ -24,7 +24,8 @@ func (self *ReplicationService) run() error {
 	var e error
 
 	// init
-	self._gc = &GarbageCollector{}
+	self._gc = &GarbageCollector{ chord: self._chord }
+	go self._gc.run()
 
 	for {
 		// sleep
@@ -100,7 +101,7 @@ func (self *ReplicationService) doGarbageCollection(backend string) {
 		if (inArray(keys.L[i], []string{"NEXT", "PREV", "STATUS"})) { continue }
 		if self.isRedundant(keys.L[i], backend) {
 			// mark it for garbage collection
-			self._gc.mark(&Garbage{ Backend: backend, Key: keys.L[i], Type: GARBAGE_KVP })
+			self._gc.mark(backend, &Garbage{ Key: keys.L[i], Type: GARBAGE_KVP })
 		}
 	}
 
@@ -110,7 +111,7 @@ func (self *ReplicationService) doGarbageCollection(backend string) {
 		if lists.L[j] == LOG_KEY { continue }
 		if self.isRedundant(lists.L[j], backend) {
 			// mark it for garbage collection
-			self._gc.mark(&Garbage{ Backend: backend, Key: lists.L[j], Type: GARBAGE_LIST })
+			self._gc.mark(backend, &Garbage{ Key: lists.L[j], Type: GARBAGE_LIST })
 		}
 	}
 }
@@ -153,7 +154,7 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 		if primary_copy != reference {
 			if self.isRedundant(keys.L[i], source) {
 				// mark it for garbage collection
-				self._gc.mark(&Garbage{ Backend: source, Key: keys.L[i], Type: GARBAGE_KVP })
+				self._gc.mark(source, &Garbage{ Key: keys.L[i], Type: GARBAGE_KVP })
 			}
 			continue
 		}
@@ -199,7 +200,7 @@ func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference s
 		if primary_copy != reference {
 			if self.isRedundant(lists.L[i], source) {
 				// mark it for garbage collection
-				self._gc.mark(&Garbage{ Backend: source, Key: lists.L[i], Type: GARBAGE_LIST })
+				self._gc.mark(source, &Garbage{ Key: lists.L[i], Type: GARBAGE_LIST })
 			}
 			continue
 		}
