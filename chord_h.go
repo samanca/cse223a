@@ -1,51 +1,56 @@
 package triblab
 //import "trib"
 import "hash/crc32"
-//import "log"
+import "log"
 import "fmt"
 //Maintain node1 and Ring for the Chord1 Ring information
 type node1 struct {
-    succ string //succ ip
-    prev string //prev ip
+    succ_ip string //succ ip
+    prev_ip string //prev ip
     ip string //its own ip
     hash uint32
-    start uint32 //start of its arc
-    end uint32 //end of its arc on self.ring
+    prev uint32 //prev of its arc
+    next uint32 //next of its arc on self.ring
 }
 
 
 type Chord1 struct {
-    back_ends[] string
     ring []node1
 }
 
 
-func getHash1(name string) uint32 {
+func (self *Chord1)getHash1(name string) uint32 {
 	h := crc32.NewIEEE()
 	h.Write([]byte(name))
 	return h.Sum32()
 }
 
-func (self *Chord1) locate_node(id uint32) uint32{
+func (self *Chord1) locate_node(id uint32,ip string) (ret_succ uint32,ret_succ_ip string){
     var succ uint32
+    var succ_ip string
     var id_max int
     var id_min int
     var max uint32
     var min uint32
-//    var r uint32
     found:=false
-    max=self.ring[0].hash//
+    max=self.ring[0].hash
     min=self.ring[0].hash
-  //  r=0
+
     if (len(self.ring)==1){
             if(self.ring[0].hash>id){
                 succ=self.ring[0].hash
-                self.ring[0].end=id
+                succ_ip=self.ring[0].ip
+                self.ring[0].succ_ip=ip
+                self.ring[0].next=id
+
             }else{
-                succ= self.ring[0].end
-                self.ring[0].end=id
+                succ= self.ring[0].next
+                succ_ip=self.ring[0].succ_ip
+                self.ring[0].succ_ip=ip
+                self.ring[0].next=id
             }
     }
+
     if (len(self.ring)>=2){
 
     for i:=0;i<len(self.ring);i++{
@@ -60,9 +65,11 @@ func (self *Chord1) locate_node(id uint32) uint32{
             }
 
 
-            if (id > self.ring[i].hash && id < self.ring[i].end){
-                succ=self.ring[i].end
-                self.ring[i].end=id
+            if (id > self.ring[i].hash && id < self.ring[i].next){
+                succ=self.ring[i].next
+                succ_ip=self.ring[i].succ_ip
+                self.ring[i].next=id
+                self.ring[i].succ_ip=ip
                 found=true
                 break
             }
@@ -70,33 +77,33 @@ func (self *Chord1) locate_node(id uint32) uint32{
         }
         if (id >max || id <min) && found==false{
                 succ=self.ring[id_min].hash
-                self.ring[id_max].end=id
+                succ_ip=self.ring[id_min].ip
+                self.ring[id_max].next=id
+                self.ring[id_max].succ_ip=ip
         }
 
         }           
-return succ
+return succ,succ_ip
 }
 
-func (self *Chord1) find_succ(id uint32) uint32{
+func (self *Chord1) find_succ(id uint32) (ret_succ uint32,ret_succ_ip string){
     var succ uint32
- //   var id_max int
- //   id_max:=1
+    var succ_ip string 
     var id_min int
     var max uint32
     var min uint32
- //   var r uint32
     found:=false
-    max=self.ring[0].hash
-    min=self.ring[0].hash
-
+    //max=self.ring[0].hash
+    //min=self.ring[0].hash
+    max=0
+    min=0
     if len(self.ring)==1{
-        return self.ring[0].hash
+        return self.ring[0].hash,self.ring[0].ip
     }
     if len(self.ring)>1{
         for i:=0;i<len(self.ring);i++{
 
              if (self.ring[i].hash > max){
-               // id_max=i
                 max=self.ring[i].hash
             }
 
@@ -105,54 +112,55 @@ func (self *Chord1) find_succ(id uint32) uint32{
                 min=self.ring[i].hash
             }
 
-            if id > self.ring[i].hash && id < self.ring[i].end{
-                succ= self.ring[i].end
+            if id > self.ring[i].hash && id < self.ring[i].next{
+                succ= self.ring[i].next
+                succ_ip=self.ring[i].succ_ip
                 found=true
                 break
             }
         }
            if (id >max || id <min) && found==false{
                 succ=self.ring[id_min].hash
+                succ_ip=self.ring[id_min].ip
+                found=true
         }
     }
-return succ
+return succ,succ_ip
 }
 
 
 func (self *Chord1) addNode(ip string){
     var Node node1
     Node.ip = ip
-    val := getHash1(ip)
+    Node.succ_ip=""
+    Node.prev_ip=""
+    Node.prev=0
+    val := self.getHash1(ip)
     Node.hash=val
     if (len(self.ring)==0){
-    Node.end=val
+    Node.next=val
+    Node.succ_ip=ip
     }else{
-    Node.end=self.locate_node(val)
+    Node.next,Node.succ_ip=self.locate_node(val,ip)
     }
     self.ring = append(self.ring,Node)
-    for i:=0;i<len(self.ring);i++{
-    fmt.Printf("Node value:%d,Node Succ:%d\n",self.ring[i].hash,self.ring[i].end)
-    }
+   
 }
 
-/***
+
 func (self *Chord1) removeNode(ip string) (error){
     var ip_used string
-    val := getHash1(ip)
-    deleted := false
-    var index int
-    index=0
+    val := self.getHash1(ip)
+    deleted:=false
+
     if (len(self.ring)==0){
         fmt.Printf("No nodes to delete\n")
-    }else{     
-        if (len(self.ring)==1){
-            if self.ring[0].hash=val{
+    }else if (len(self.ring)==1){
+            if self.ring[0].hash==val{
             self.ring = make ([]node1, 0)
             }
-        }
-        deleted=true 
-    }else{
-        if (len(self.ring)==2){
+            deleted=true
+    }else if (len(self.ring)==2){
             if self.ring[0].hash==val{
             ip_used=self.ring[1].ip
             }else{
@@ -161,46 +169,41 @@ func (self *Chord1) removeNode(ip string) (error){
             }
             }
 
-            self.ring = make([]node,1)
+            self.ring = make([]node1,1)
             self.ring[0].ip=ip_used
-            new_val := getHash1(ip_used)
-            self.ring[0].end= new_val
+            new_val := self.getHash1(ip_used)
+            self.ring[0].next= new_val
             deleted=true
-            }
     }else{
         for i:=0;i<len(self.ring);i++{
             if val==self.ring[i].hash{
-                /**
-                 for j:=0;j<len(self.ring);j++{
-            //Fix the successor node
-                if self.ring[j].hash==self.ring[i].end{
-//log.Print("remove23")
-                //    self.ring[j].prev = self.ring[i].prev
-                    self.ring[j].start = self.ring[i].start
-                }
-            //Fix the predecessor node
-//log.Print("remove24")
-                if self.ring[j].ip==self.ring[i].prev{
-//log.Print("remove25")
-                    self.ring[j].succ=self.ring[i].succ
-                }
+    
+                for j:=0;j<len(self.ring);j++{
+                    if self.ring[j].hash==self.ring[i].next{
+                        self.ring[j].prev = self.ring[i].prev
+                    }
+                if self.ring[j].hash==self.ring[i].prev{
+                    self.ring[j].next=self.ring[i].next
+                    }
             }
                 self.ring = append(self.ring[:i],self.ring[i+1:]...)
                 deleted=true
-                index=i-1
             }
         }
     }
 
-    if(deleted==false)
+    if(deleted==false){
         return fmt.Errorf("Error while deleting node in Chord")
-    else
+    }else{
         return nil
-    
-}***/
+    }    
+}
 
+func (self *Chord1) printRing() {
 
-
-
+    for i:= range self.ring {
+        log.Printf("%d--%d--%d--%s--%s",self.ring[i].hash,self.ring[i].prev,self.ring[i].next,self.ring[i].ip,self.ring[i].succ_ip)
+    }
+}
 
 
