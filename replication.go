@@ -14,13 +14,17 @@ const (
  * TODO check for race conditions while accessing Chord
  */
 type ReplicationService struct {
-	_chord *Chord
+	_chord	*Chord
+	_gc		*GarbageCollector
 }
 
 // Background replication service (only for OpLog)
 func (self *ReplicationService) run() error {
 
 	var e error
+
+	// init
+	self._gc = &GarbageCollector{}
 
 	for {
 		// sleep
@@ -78,11 +82,13 @@ func (self *ReplicationService) run() error {
 	return fmt.Errorf("unexcpected behavior in replication service!")
 }
 
-func (self *ReplicationService) garbageCollector() {
-	// TODO
+func (self *ReplicationService) isRedundant(key string, backend string) bool {
+	prev, _ := self._chord.Prev_node_ip(backend)
+	prev_prev, _ := self._chord.Prev_node_ip(prev)
+	host, _ := self._chord.getIPbyBinName(extractNS(key))
+	return !inArray(host, []string{backend, prev, prev_prev})
 }
 
-// TODO avoid copying keys with empty value to destination
 func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference string) {
 
 	var keys List
@@ -100,6 +106,9 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 	anyFailure = false
 	for i := range keys.L {
 
+		// avoid replicating metadata information
+		if (inArray(keys.L[i], []string{"NEXT", "PREV", "STATUS"})) { continue }
+
 		// filter
 		primary_copy, e := self._chord.getIPbyBinName(extractNS(keys.L[i]))
 		if e !=  nil {
@@ -107,11 +116,19 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 			continue
 		}
 		if primary_copy != reference {
-			continue // TODO mark it for garbage collection if it's not a replica
+			if self.isRedundant(keys.L[i], source) {
+				// mark it for garbage collection
+				self._gc.mark(&Garbage{ Backend: source, Key: keys.L[i], Type: GARBAGE_KVP })
+			}
+			continue
 		}
 
 		err = s_conn.Get(keys.L[i], &value)
 		if err != nil { anyFailure = true; continue }
+
+		// avoid copying keys with empty value to destination
+		if value == EMPTY_STRING { continue }
+
 		err = d_conn.Set(&KeyValue{ Key: keys.L[i], Value: value }, &b)
 		if err !=  nil || b == false { anyFailure = true }
 	}
@@ -119,7 +136,6 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 	*c<-(!anyFailure)
 }
 
-// TODO avoid copying empty lists to destination
 func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference string) {
 
 	var lists, buffer List
@@ -148,14 +164,20 @@ func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference s
 		log.Printf("primary_copy = %s (%s)", primary_copy, lists.L[i])
 
 		if primary_copy != reference {
-			continue // TODO mark it for garbage collection if it's not a replica
+			if self.isRedundant(lists.L[i], source) {
+				// mark it for garbage collection
+				self._gc.mark(&Garbage{ Backend: source, Key: lists.L[i], Type: GARBAGE_LIST })
+			}
+			continue
 		}
 
-		// TODO avoid replicating other metadata information
+		// avoid replicating other metadata information
 		if lists.L[i] == LOG_KEY { continue }
 
 		err = s_conn.ListGet(lists.L[i], &buffer)
 		if err != nil { anyFailure = true; continue }
+
+		// avoid copying empty lists to destination (automatically handled)
 		for j := range buffer.L {
 			err = d_conn.ListAppend(&KeyValue{ Key: lists.L[i], Value: buffer.L[j]}, &b)
 			if err !=  nil || b == false { anyFailure = true }
