@@ -105,7 +105,9 @@ func (self *Chord1) find_succ(id uint32) (ret_succ uint32, ret_succ_ip string) {
     var min uint32 = 4294967295
     found := false
 
-	if LogEnabled { log.Printf("Ring size: %d", len(self.ring)) }
+    if LogEnabled {
+        log.Printf("Ring size: %d", len(self.ring))
+    }
     if len(self.ring) == 0 {
         log.Printf("IN ring of size 0. !!!! IN ind_succ")
         return 0, EMPTY_STRING
@@ -114,9 +116,13 @@ func (self *Chord1) find_succ(id uint32) (ret_succ uint32, ret_succ_ip string) {
         return self.ring[0].hash, self.ring[0].ip
     }
     if len(self.ring) > 1 {
-        if LogEnabled { log.Printf("Starting to do sth") }
+        if LogEnabled {
+            log.Printf("Starting to do sth")
+        }
         for i := 0; i < len(self.ring); i++ {
-			if LogEnabled {log.Printf("in find_succ - stuck not working") }
+            if LogEnabled {
+                log.Printf("in find_succ - stuck not working")
+            }
             if self.ring[i].hash > max {
                 max = self.ring[i].hash
             }
@@ -127,7 +133,9 @@ func (self *Chord1) find_succ(id uint32) (ret_succ uint32, ret_succ_ip string) {
             }
 
             if id > self.ring[i].hash && id <= self.ring[i].next {
-                if LogEnabled { log.Printf("[1]") }
+                if LogEnabled {
+                    log.Printf("[1]")
+                }
                 succ = self.ring[i].next
                 succ_ip = self.ring[i].succ_ip
                 found = true
@@ -136,10 +144,14 @@ func (self *Chord1) find_succ(id uint32) (ret_succ uint32, ret_succ_ip string) {
         }
 
         if (id > max || id < min) && found == false {
-			if LogEnabled { log.Printf("[2]") }
+            if LogEnabled {
+                log.Printf("[2]")
+            }
             succ = self.ring[id_min].hash
             succ_ip = self.ring[id_min].ip
-			if LogEnabled { log.Printf("succ_ip in find_succ is %s",succ_ip) }
+            if LogEnabled {
+                log.Printf("succ_ip in find_succ is %s", succ_ip)
+            }
             found = true
         }
     }
@@ -154,14 +166,33 @@ func (self *Chord1) addNode(ip string) {
     Node.prev = 0
     val := self.getHash1(ip)
     Node.hash = val
-    if len(self.ring) == 0 {
+    /*   if len(self.ring) == 0 {
         Node.next = val
         Node.succ_ip = ip
     } else {
         Node.next, Node.succ_ip = self.locate_node(val, ip)
     }
     self.ring = append(self.ring, Node)
+    */
+    var status bool
 
+    if len(self.ring) == 0 {
+        Node.next = val
+        Node.succ_ip = ip
+    } else {
+        for i := range self.ring {
+            if self.ring[i].ip == ip {
+                status = true
+                break
+            }
+        }
+        if status == false {
+            Node.next, Node.succ_ip = self.locate_node(val, ip)
+        }
+    }
+    if status == false {
+        self.ring = append(self.ring, Node)
+    }
 }
 
 func (self *Chord1) removeNode(ip string) error {
@@ -199,6 +230,33 @@ func (self *Chord1) removeNode(ip string) error {
                 for j := 0; j < len(self.ring); j++ {
                     if self.ring[j].hash == self.ring[i].next {
                         self.ring[j].prev = self.ring[i].prev
+                        self.ring[j].prev_ip = self.ring[i].prev_ip
+                        log.Print(self.ring[j].ip, "Setting prev of ", self.ring[j].prev_ip, "-", self.ring[i].prev_ip)
+
+                    }
+                    if self.ring[j].hash == self.ring[i].prev {
+                        self.ring[j].next = self.ring[i].next
+                        self.ring[j].succ_ip = self.ring[i].succ_ip
+                        log.Print(self.ring[j].ip, "Setting next of ", self.ring[j].succ_ip, "-", self.ring[i].succ_ip)
+                    }
+                }
+                self.ring = append(self.ring[:i], self.ring[i+1:]...)
+                deleted = true
+            }
+        }
+    }
+
+    if deleted == false {
+        return fmt.Errorf("Error while deleting node in Chord")
+    } else {
+        return nil
+    }
+}
+
+/*
+                for j := 0; j < len(self.ring); j++ {
+                    if self.ring[j].hash == self.ring[i].next {
+                        self.ring[j].prev = self.ring[i].prev
                     }
                     if self.ring[j].hash == self.ring[i].prev {
                         self.ring[j].next = self.ring[i].next
@@ -215,7 +273,7 @@ func (self *Chord1) removeNode(ip string) error {
     } else {
         return nil
     }
-}
+}*/
 
 //func (self *Chord1) succ() {
 
