@@ -322,6 +322,7 @@ func (self *Chord) MarshalChord() ([]byte, error){
 func (self *keeper) run() error {
 //The section below does the wait and read/write chord data.
 //The actual keeper starts at "Tag:2"
+	log.Print("starting keeper ...")
     cokeep := &CoKeeper{config:self.config}
     cokeep.init()
 
@@ -332,7 +333,7 @@ func (self *keeper) run() error {
     bytechord1,err01:=cokeep.GetMostUpdatedChord()
     if err01!=nil{
         log.Print("keeper.go - error in GetMostUpdatedChord")
-        return fmt.Errorf("keeper.go - Error in GetMostUpdatedChord")
+        //return fmt.Errorf("keeper.go - Error in GetMostUpdatedChord")
     }
 
     //Tag:2 - BEYOND THIS LINE RUNS THE KEEPER - YOU HAVE BEEN WARNED
@@ -347,7 +348,11 @@ func (self *keeper) run() error {
 	// initialize
     var chord Chord
     chord.initialize()
-    json.Unmarshal(bytechord1,&chord)
+	if err01!=fmt.Errorf("empty chord"){
+		if json.Unmarshal(bytechord1, &chord) != nil {
+			log.Print("unable to unmarshal received CHORD!")
+		}
+	}
 
 //log.Print(chord.ring)
     replication := &ReplicationService{ _chord: &chord }

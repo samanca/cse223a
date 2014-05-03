@@ -2,44 +2,81 @@ package triblab
 import . "trib"
 import "time"
 import "fmt"
+import "log"
 import "trib/store"
 
+const (
+	CHORD_STORE_KEY = "CHORD"
+)
+
 type CoKeeper struct {
-	config *KeeperConfig
-	_store Storage
+	config		*KeeperConfig
+	_store		Storage
+	_conns		[]*client
+	_myAddress	string
 }
 
-func (self *CoKeeper) init() error {
+func (self *CoKeeper) init() {
+
+	self._myAddress = self.config.Addrs[self.config.This]
+
+	// connection handlers
+	self._conns = make([]*client, len(self.config.Addrs))
+	for i := range self.config.Addrs {
+		if self.config.Addrs[i] == self._myAddress { continue }
+		self._conns[i] = &client{ addr: self.config.Addrs[i] }
+	}
+
+	// RPC server config
 	self._store = store.NewStorage()
 	back := &BackConfig{
-		Addr:  self.config.Addrs[self.config.This],
+		Addr:  self._myAddress,
 		Store: self._store,
 		Ready: make(chan bool, 1),
 	}
 
-	e := ServeBack(back)
-	if e != nil { return e }
-	return nil
+	// run RPC server
+	go ServeBack(back)
 }
 
 func (self *CoKeeper) run(ch *chan bool) {
 
-	myAddress := self.config.Addrs[self.config.This]
-	var maxObservedAddress string = myAddress
+	var tempChordObj, maxChordObj string
+	var maxObservedAddress string = EMPTY_STRING
 
 	for {
 		// rest for a while
 		time.Sleep(1 * time.Second)
 
 		// Pull everybody
+		for i := range self.config.Addrs {
+			if self.config.Addrs[i] == self._myAddress { continue }
 
+			err := self._conns[i].Get(CHORD_STORE_KEY, &tempChordObj)
+			if err != nil { continue } // probably the other keeper is down
+
+			log.Printf("%s got CHORD from %s", self._myAddress, self._conns[i].addr)
+
+			if self.config.Addrs[i] > maxObservedAddress {
+				maxObservedAddress = self.config.Addrs[i]
+				maxChordObj = tempChordObj
+			}
+		}
 
 		// decide about the future!
-		if myAddress > maxObservedAddress {
+		if maxObservedAddress != EMPTY_STRING && self._myAddress > maxObservedAddress {
 			break
+		} else {
+			log.Printf("%s does not own the maximum IP!", self._myAddress)
+			var success bool
+			kv := KeyValue{ Key: CHORD_STORE_KEY, Value: maxChordObj }
+			er := self._store.Set(&kv, &success)
+			if er != nil { log.Printf("unable to update local CHORD: %s", er) }
+			if er == nil && !success { log.Printf("unable to update local CHORD!") }
 		}
 	}
 
+	log.Printf("<%s> is the PRIMARY from now on ...", self._myAddress)
 	*ch <- true // I am the PRIMARY from now on
 }
 
@@ -49,7 +86,7 @@ func (self *CoKeeper) run(ch *chan bool) {
  */
 func (self *CoKeeper) UpdateChord(chord []byte) error {
 	var success bool
-	kv := KeyValue{ Key: "CHORD", Value: string(chord) }
+	kv := KeyValue{ Key: CHORD_STORE_KEY, Value: string(chord) }
 	er := self._store.Set(&kv, &success)
 	if !success {
 		return fmt.Errorf("unable to read chord")
@@ -63,6 +100,9 @@ func (self *CoKeeper) UpdateChord(chord []byte) error {
  */
 func (self *CoKeeper) GetMostUpdatedChord() ([]byte, error) {
 	var value string
-	err := self._store.Get("CHORD", &value)
+	err := self._store.Get(CHORD_STORE_KEY, &value)
+	if err == nil && value == EMPTY_STRING {
+		err = fmt.Errorf("empty chord")
+	}
 	return []byte(value), err
 }
