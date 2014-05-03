@@ -53,12 +53,12 @@ func (self *CoKeeper) updateMyState(state string) error {
 func (self *CoKeeper) run(ch *chan bool) {
 
 	var tempChordObj, maxChordObj, tempState string
-	var maxObservedAddress string = EMPTY_STRING
 
 	for {
 
 		var primaryObserved bool = false
 		var anyOtherAlive bool = false
+		var maxObservedAddress string = EMPTY_STRING
 
 		// rest for a while
 		time.Sleep(1 * time.Second)
@@ -82,21 +82,24 @@ func (self *CoKeeper) run(ch *chan bool) {
 			}
 
 			anyOtherAlive = true
-			if tempState == STATE_PRIMARY { primaryObserved = true }
+			if tempState == STATE_PRIMARY {
+				primaryObserved = true
+				maxChordObj = tempChordObj
+			}
 
-			log.Printf("%s got CHORD from %s", self._myAddress, self._conns[i].addr)
+			log.Printf("Got CHORD from %s", self._conns[i].addr)
 
-			if self.config.Addrs[i] > maxObservedAddress {
+			if !primaryObserved && self.config.Addrs[i] > maxObservedAddress {
 				maxObservedAddress = self.config.Addrs[i]
 				maxChordObj = tempChordObj
 			}
 		}
 
 		// decide about the future!
-		if !anyOtherAlive || (!primaryObserved && maxObservedAddress != EMPTY_STRING && self._myAddress > maxObservedAddress) {
+		// NOTE removed (maxObservedAddress != EMPTY_STRING) from second part as it can be infered from anyOtherAlive
+		if !anyOtherAlive || (!primaryObserved && self._myAddress > maxObservedAddress) {
 			if self.updateMyState(STATE_PRIMARY) == nil { break }
 		} else {
-			log.Printf("%s does not own the maximum IP!", self._myAddress)
 			var success bool
 			kv := KeyValue{ Key: CHORD_STORE_KEY, Value: maxChordObj }
 			er := self._store.Set(&kv, &success)
