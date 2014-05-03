@@ -93,7 +93,7 @@ log.Print(val, self.ring[j].start,self.ring[j].end, self.ring[j].ip)
 
 func (self *Chord) getIPbyBinName(name string) (string,error){
     val := getHash(name)
-log.Print("Bin name" - name)
+log.Print("Bin name - ", name)
     return self.lookupValinRing(val)
 }
 
