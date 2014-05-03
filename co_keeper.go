@@ -7,6 +7,9 @@ import "trib/store"
 
 const (
 	CHORD_STORE_KEY = "CHORD"
+	CK_STATE_KEY	= "STATE"
+	STATE_SECONDARY = "SECONDARY"
+	STATE_PRIMARY	= "PRIMARY"
 )
 
 type CoKeeper struct {
@@ -35,25 +38,48 @@ func (self *CoKeeper) init() {
 		Ready: make(chan bool, 1),
 	}
 
+	// start with secondary
+	self.updateMyState(STATE_SECONDARY)
+
 	// run RPC server
 	go ServeBack(back)
 }
 
+func (self *CoKeeper) updateMyState(state string) error {
+	var success bool
+	return self._store.Set(&KeyValue{ Key: CK_STATE_KEY, Value: state }, &success)
+}
+
 func (self *CoKeeper) run(ch *chan bool) {
 
-	var tempChordObj, maxChordObj string
+	var tempChordObj, maxChordObj, tempState string
 	var maxObservedAddress string = EMPTY_STRING
 
 	for {
+
+		var primaryObserved bool = false
+
 		// rest for a while
 		time.Sleep(1 * time.Second)
 
 		// Pull everybody
 		for i := range self.config.Addrs {
+
 			if self.config.Addrs[i] == self._myAddress { continue }
 
+			// pull chord
 			err := self._conns[i].Get(CHORD_STORE_KEY, &tempChordObj)
-			if err != nil { continue } // probably the other keeper is down
+			if err != nil { // probably the other keeper is down
+				log.Printf("unable to read CHORD from %s", self._conns[i].addr)
+				continue
+			}
+
+			err = self._conns[i].Get(CK_STATE_KEY, &tempState)
+			if err != nil { // probably the other keeper is down
+				log.Printf("unable to read STATE from %s", self._conns[i].addr)
+				continue
+			}
+			if tempState == STATE_PRIMARY { primaryObserved = true }
 
 			log.Printf("%s got CHORD from %s", self._myAddress, self._conns[i].addr)
 
@@ -64,8 +90,8 @@ func (self *CoKeeper) run(ch *chan bool) {
 		}
 
 		// decide about the future!
-		if maxObservedAddress != EMPTY_STRING && self._myAddress > maxObservedAddress {
-			break
+		if !primaryObserved && maxObservedAddress != EMPTY_STRING && self._myAddress > maxObservedAddress {
+			if self.updateMyState(STATE_PRIMARY) == nil { break }
 		} else {
 			log.Printf("%s does not own the maximum IP!", self._myAddress)
 			var success bool
