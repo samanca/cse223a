@@ -514,6 +514,14 @@ func (self *keeper) run() error {
             if errr!=nil{
                 fmt.Errorf("chordminisnapshot network error. check.")
             }
+        bytechord12,err102:=chord.MarshalChord()
+        if err102!=nil{
+            log.Print("Error in marshaling chord")
+        }
+        err34:=cokeep.UpdateChord(bytechord12)
+        if err34!=nil{
+            log.Print("Error in sending update chord")
+        }
 			go replication.notifyLeave(&chordminisnapshot1)
 //log.Print(16)
 //vineet
