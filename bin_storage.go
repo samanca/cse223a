@@ -220,6 +220,26 @@ func (self *BinStorageWrapper) updateRing() {
             self.chord.removeNode(to_remove_hash) // This should remove the node as well as the fix succ and prev
         } else if status == 2 {
             self.chord.addNode(next)
+
+			cli2 := &client{addr: next}
+
+			var next22, prev22 string
+			_, err21 := cli2.acquireConnection()
+			if err21 == nil { // Node is alive
+				// Read PREV and NEXT from the live node
+				err12 := cli.Get("NEXT", &next22)
+				err22 := cli.Get("PREV", &prev22)
+				if err12!=nil || err22!=nil{
+					log.Print("BOOHOOHOOHOHOHOHOHOH")
+				}
+			}
+
+			for i2:= range self.chord.ring{
+				if self.chord.ring[i2].ip==next{
+					self.chord.ring[i2].prev=getHash(prev22)
+					self.chord.ring[i2].prev_ip=prev22
+				}
+			}
         } else if status == 3 { // if the connection was not successful then remove that node
             self.chord.removeNode(ip)
         }
