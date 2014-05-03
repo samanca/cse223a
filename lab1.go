@@ -2,6 +2,8 @@ package triblab
 
 import . "trib"
 
+var LogEnabled bool = false
+
 // Creates an RPC client that connects to addr.
 func NewClient(addr string) Storage {
 	//return &client{ addr: addr }
