@@ -132,8 +132,10 @@ func (self *BinStorageWrapper) updateRing() {
     var incr uint32
     var ip string
     incr = 0
-    var found bool
+
     status := 0
+	var to_remove_hash string = EMPTY_STRING
+
     if LogEnabled {
         log.Print("Entering updateRing")
     }
@@ -181,29 +183,41 @@ func (self *BinStorageWrapper) updateRing() {
                     log.Print(next_val)
                 }
 
-                if self.chord.ring[i].next != next_val || self.chord.ring[i].prev != prev_val {
+				//Basically this previous check should never happen
+				if self.chord.ring[i].prev != prev_val{
+					log.Print ("In updateRing(). The previous values are not matching. This shoulld NEVER happen!!. CORRECT THIS!")
+				}
+
+                if self.chord.ring[i].next != next_val {
                     // New node was added or some node was deleted
-                    found = false
+
+					//next_val_succ=self.chord.find_succ(next_val)
+
                     for j := range self.chord.ring {
                         if self.chord.ring[j].ip == next {
-                            found = true
+							//This means that the node "self.chord.ring[i].next" has been removed from the ring
+							to_remove_hash = self.chord.ring[i].succ_ip
+							if to_remove_hash==EMPTY_STRING{
+								log.Print ("You suck!")
+							}
                             status = 1
                             break
                         }
                     }
-
-                    if found == false {
+                    if status !=1  {
                         status = 2
+						break
                     }
                 }
             } else { // if the connection was not successful then remove that node
                 status = 3
+				break
                 //self.chord.removeNode(ip)
             }
         }
 
         if status == 1 {
-            self.chord.removeNode(next) // This should remove the node as well as the fix succ and prev
+            self.chord.removeNode(to_remove_hash) // This should remove the node as well as the fix succ and prev
         } else if status == 2 {
             self.chord.addNode(next)
         } else if status == 3 { // if the connection was not successful then remove that node

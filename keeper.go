@@ -273,6 +273,8 @@ func (self *Chord) removeNodefromRing(ip string) (string, string, error){
     for i:=0;i<len(self.ring);i++{
 //log.Print("remove20")
         if ip==self.ring[i].ip{
+			next1:=self.ring[i].succ
+			prev1:=self.ring[i].prev
 //log.Print("remove21")
             //we have found our node, need to modify the relevant succ and prev values in ring
             //and remove the node
@@ -293,9 +295,10 @@ func (self *Chord) removeNodefromRing(ip string) (string, string, error){
             }
 //log.Print("remove26")
             //Remove the node
+
             self.ring = append(self.ring[:i],self.ring[i+1:]...)
 //log.Print("remove27")
-            return "","",nil
+            return next1,prev1,nil
         }
     }
     return "","",nil
@@ -486,7 +489,7 @@ var node_status []bool = make ([]bool,300)
             //Remove node - modify ring
                 var err2 error
                 next,prev,err2 = chord.removeNodefromRing(self.config.Backs[i])
-//log.Print(17)
+//log.Print(17,next,prev,self.config.Backs[i])
 //vineet
 //log.Print(chord.ring)
                 if err2!=nil{
@@ -497,19 +500,16 @@ var node_status []bool = make ([]bool,300)
                 //TODO for the other nodes
                 var succ4,succ5 bool
                 for j:=0;j<len(self.workers);j++{
-//log.Print(19)
                     if self.config.Backs[j]==prev{
-//log.Print(191)
+//log.Print("194-----------------------------")
                         err4:=self.workers[j].handler.Set(&KeyValue{Key:"NEXT",Value:next},&succ4)
-//log.Print(192)
                         if err4!=nil || succ4!=true{
-//log.Print(193)
-                            return fmt.Errorf("Error: with set NEXT in prev")
+                           return fmt.Errorf("Error: with set NEXT in prev")
                         }
                     }
-//log.Print(194)
+
                     if self.config.Backs[j]==next{
-//log.Print(195)
+//log.Print("195-----------------")
                         err5:=self.workers[j].handler.Set(&KeyValue{Key:"PREV",Value:prev},&succ5)
 //log.Print(196)
                         if err5!=nil || succ5!=true{
