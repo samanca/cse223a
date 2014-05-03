@@ -5,11 +5,13 @@ import (
 )
 
 func NewBinClient(backs []string) BinStorage {
-	BinS:=BinStorageWrapper{ back_ends: backs }
+	BinS:=&BinStorageWrapper{ back_ends: backs }
 	BinS.bootStrapRing()
+	BinS.printRing()
 	BinS.fixPreviousPointer()
-	BinS.chord.printRing()
-//	go BinS.updateRing()
+	BinS.printRing()
+//	BinS.testFindSucc()
+	go BinS.updateRing()
 	return BinS
 }
 

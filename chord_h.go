@@ -35,7 +35,8 @@ func (self *Chord1) locate_node(id uint32,ip string) (ret_succ uint32,ret_succ_i
     found:=false
     max=self.ring[0].hash
     min=self.ring[0].hash
-
+    log.Print("Enter locate node")
+   // log.Print(self.ring)
     if (len(self.ring)==1){
             if(self.ring[0].hash>id){
                 succ=self.ring[0].hash
@@ -82,7 +83,8 @@ func (self *Chord1) locate_node(id uint32,ip string) (ret_succ uint32,ret_succ_i
                 self.ring[id_max].succ_ip=ip
         }
 
-        }           
+        }     
+        log.Print("Exit locate node")      
 return succ,succ_ip
 }
 
@@ -199,11 +201,8 @@ func (self *Chord1) removeNode(ip string) (error){
     }    
 }
 
-func (self *Chord1) printRing() {
+//func (self *Chord1) succ() {
 
-    for i:= range self.ring {
-        log.Printf("%d--%d--%d--%s--%s",self.ring[i].hash,self.ring[i].prev,self.ring[i].next,self.ring[i].ip,self.ring[i].succ_ip)
-    }
-}
+//}
 
 
