@@ -5,7 +5,11 @@ import (
 )
 
 func NewBinClient(backs []string) BinStorage {
-	return BinStorageWrapper{ back_ends: backs }
+	BinS:=BinStorageWrapper{ back_ends: backs }
+	BinS.bootStrapRing()
+	BinS.fixPreviousPointer()
+	go BinS.updateRing()
+	return BinS
 }
 
 func ServeKeeper(kc *KeeperConfig) error {
