@@ -89,18 +89,53 @@ func (self *ReplicationService) isRedundant(key string, backend string) bool {
 	return !inArray(host, []string{backend, prev, prev_prev})
 }
 
+// Simply marks redundant data for garbage collection (to be done in a background thread)
+func (self *ReplicationService) doGarbageCollection(backend string) {
+
+	conn := &client{ addr: backend }
+
+	// check KVs
+	keys,_ := getAllKeys(conn, false)
+	for i := range keys.L {
+		if (inArray(keys.L[i], []string{"NEXT", "PREV", "STATUS"})) { continue }
+		if self.isRedundant(keys.L[i], backend) {
+			// mark it for garbage collection
+			self._gc.mark(&Garbage{ Backend: backend, Key: keys.L[i], Type: GARBAGE_KVP })
+		}
+	}
+
+	// check ListKeys
+	lists,_ := getAllKeys(conn, true)
+	for j := range lists.L {
+		if lists.L[j] == LOG_KEY { continue }
+		if self.isRedundant(lists.L[j], backend) {
+			// mark it for garbage collection
+			self._gc.mark(&Garbage{ Backend: backend, Key: lists.L[j], Type: GARBAGE_LIST })
+		}
+	}
+}
+
+func getAllKeys(conn *client, isList bool) (List, error) {
+	var err error
+	var keys List
+	p := &Pattern{ Prefix: "", Suffix: "" }
+	if isList {
+		err = conn.ListKeys(p, &keys)
+	} else {
+		err = conn.Keys(p, &keys)
+	}
+	return keys, err
+}
+
 func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference string) {
 
-	var keys List
-	var err error
 	var value string
 	var b, anyFailure bool
 
 	s_conn := &client{ addr: source }
 	d_conn := &client{ addr: dest }
-	p := &Pattern{ Prefix: "*", Suffix: "*" }
 
-	err = s_conn.Keys(p, &keys)
+	keys, err := getAllKeys(s_conn, false)
 	if err != nil { *c<-false; return }
 
 	anyFailure = false
@@ -138,15 +173,13 @@ func (self *ReplicationService) _cpValues(c *chan bool, source, dest, reference 
 
 func (self *ReplicationService) _cpLists(c *chan bool, source, dest, reference string) {
 
-	var lists, buffer List
-	var err error
+	var buffer List
 	var b, anyFailure bool
 
 	s_conn := &client{ addr: source }
 	d_conn := &client{ addr: dest }
-	p := &Pattern{ Prefix: "", Suffix: "" }
 
-	err = s_conn.ListKeys(p, &lists)
+	lists, err := getAllKeys(s_conn, true)
 	if err != nil { *c<-false; return }
 
 	log.Printf("cpLists for %s of size %d from %s to %s", reference, len(lists.L), source, dest)
@@ -210,7 +243,6 @@ func (self *ReplicationService) replicateThrough(c *chan bool, source, dest, tp 
 	*c<-(succ == 2)
 }
 
-// TODO@Vineet Should be invoked after reflecting the change in Chord
 func (self *ReplicationService) notifyJoin(chord *ChordMiniSnapshot) error {
 
 	if chord.ofSizeOne() {
@@ -240,7 +272,10 @@ func (self *ReplicationService) notifyJoin(chord *ChordMiniSnapshot) error {
 	log.Printf("finished with background replicaiton for join ...")
 
 	// report garbage
-	// TODO
+	if !chord.smallerThanFour() {
+		self.doGarbageCollection(chord.next)
+		self.doGarbageCollection(chord.next_next)
+	}
 
 	if succ == 3 {
 		return nil
@@ -250,7 +285,6 @@ func (self *ReplicationService) notifyJoin(chord *ChordMiniSnapshot) error {
 }
 
 // TODO refactor (too much duplicated code)
-// TODO@Vineet Should be invoked before reflecting node failure in Chord
 func (self *ReplicationService) notifyLeave(chord *ChordMiniSnapshot) error {
 
 	if chord.smallerThanFour() {
@@ -272,7 +306,7 @@ func (self *ReplicationService) notifyLeave(chord *ChordMiniSnapshot) error {
 	}
 
 	// report garbage
-	// TODO
+	// nothing to do here
 
 	if succ == 3 {
 		return nil
